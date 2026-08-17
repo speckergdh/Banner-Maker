@@ -70,16 +70,16 @@
        --bs-body-color: var(--text-primary);
        
        /* Spacing */
-       --spacing-xs: 1px;
-       --spacing-sm: 2px;
-       --spacing-md: 4px;
-       --spacing-lg: 6px;
-       --spacing-xl: 8px;
-       
+       --spacing-xs: 4px;
+       --spacing-sm: 8px;
+       --spacing-md: 12px;
+       --spacing-lg: 20px;
+       --spacing-xl: 28px;
+
        /* Border Radius */
-       --border-radius-sm: 0px;
-       --border-radius-md: 0px;
-       --border-radius-lg: 0px;
+       --border-radius-sm: 6px;
+       --border-radius-md: 10px;
+       --border-radius-lg: 16px;
        
        /* Shadows */
        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
@@ -198,6 +198,14 @@
          gap: 1rem;
          max-width: 1600px;
          margin: 0 auto;
+         counter-reset: section-step;
+       }
+
+       /* Numbers the visible panels in workflow order; display:none sections
+          (Fabric.js) generate no box so they're skipped automatically. */
+       .section-header h3::before {
+         counter-increment: section-step;
+         content: counter(section-step) ". ";
        }
        
        @media (max-width: 768px) {
@@ -235,22 +243,18 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0.25rem 0.4rem;
+        padding: var(--spacing-sm) var(--spacing-md);
         background: linear-gradient(135deg, var(--primary-color) 0%, #061a2e 100%);
-        border: 2px solid var(--primary-color);
-        border-bottom: none;
         border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
         cursor: pointer;
         user-select: none;
         transition: all 0.2s ease;
-        box-shadow: var(--shadow-sm);
         width: 100%;
         box-sizing: border-box;
       }
-      
+
       .section-header:hover {
         background: linear-gradient(135deg, #061a2e 0%, #040f1a 100%);
-        border-color: var(--primary-color-dark);
       }
       
       .section-header h3 {
@@ -275,9 +279,7 @@
       }
       
       .section-content {
-        padding: 0.15rem;
-        border: 2px solid var(--primary-color);
-        border-top: none;
+        padding: var(--spacing-sm);
         border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
         background: transparent;
         transition: all 0.3s ease;
@@ -295,45 +297,44 @@
       
       /* Control section improvements */
       .control-section {
-        margin-bottom: 0.25rem;
+        margin-bottom: var(--spacing-sm);
         border-radius: var(--border-radius-md);
         overflow: hidden;
         box-shadow: var(--shadow-sm);
       }
-      
+
       .control-section.collapsed {
-        margin-bottom: 0.1rem;
+        margin-bottom: var(--spacing-xs);
       }
-      
-      /* Tighten overall spacing */
+
       .controls-grid {
-        gap: 0.15rem;
+        gap: var(--spacing-md);
       }
-      
+
       .controls-panel {
-        padding: 0.5rem;
+        padding: var(--spacing-lg);
       }
-      
+
       .customization-title {
-        margin-bottom: 0.25rem;
+        margin-bottom: var(--spacing-sm);
         font-size: 1rem;
       }
-      
+
       /* Additional spacing and border fixes */
       .controls-panel h2 {
-        margin-bottom: 0.15rem;
+        margin-bottom: var(--spacing-sm);
       }
-      
+
       .main-content {
-        gap: 0.3rem;
+        gap: var(--spacing-lg);
       }
-      
+
       .preview-panel {
-        padding: 0.5rem;
+        padding: var(--spacing-lg);
       }
-      
+
       .preview-panel h2 {
-        margin-bottom: 0.15rem;
+        margin-bottom: var(--spacing-sm);
       }
       
       /* Ensure all inputs have borders */
@@ -344,7 +345,7 @@
       }
       
       input[type="color"] {
-        border: 2px solid var(--border-color) !important;
+        border: 2px solid #d5dbe1 !important;
         border-radius: var(--border-radius-sm) !important;
         padding: 0.25rem !important;
         height: 40px !important;
@@ -466,7 +467,7 @@
         padding-right: 25px;
       }
       
-      /* Ensure only form inputs have gradient borders */
+      /* Plain, calm resting border; accent color + glow only on focus */
       .form-group input[type="text"],
       .form-group input[type="number"],
       .form-group input[type="email"],
@@ -477,18 +478,17 @@
       .form-group input[type="file"],
       .form-group select,
       .form-group textarea {
-        border: 2px solid !important;
-        border-image: linear-gradient(135deg, var(--primary-color) 0%, #061a2e 100%) 1 !important;
+        border: 2px solid #d5dbe1 !important;
         border-radius: var(--border-radius-sm) !important;
-        padding: 0.5rem !important;
+        padding: 0.6rem 0.75rem !important;
         background-color: var(--surface-color-solid) !important;
         color: var(--text-primary) !important;
         font-size: 14px !important;
-        transition: all 0.3s ease !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
         box-sizing: border-box !important;
-        box-shadow: var(--shadow-glow) !important;
+        box-shadow: none !important;
       }
-      
+
       .form-group input[type="text"]:focus,
       .form-group input[type="number"]:focus,
       .form-group input[type="email"]:focus,
@@ -500,9 +500,8 @@
       .form-group select:focus,
       .form-group textarea:focus {
         outline: none !important;
-        border-image: linear-gradient(135deg, var(--primary-color) 0%, #040f1a 100%) 1 !important;
+        border-color: var(--primary-color) !important;
         box-shadow: var(--shadow-glow) !important;
-        transform: translateY(-1px) !important;
       }
 
                    /* Form Groups - Override for specific cases */
@@ -576,7 +575,7 @@
       height: 30px;
       width: 100%;
       padding: 2px;
-      border: 2px solid var(--border-color);
+      border: 2px solid #d5dbe1;
       border-radius: var(--border-radius-sm);
       cursor: pointer;
     }
@@ -749,27 +748,11 @@
 
                              /* Control Sections */
       .control-section {
-        margin-bottom: var(--spacing-md);
-        padding: var(--spacing-sm);
-        border: 2px solid var(--border-color);
-        border-radius: var(--border-radius-sm);
         position: relative;
         overflow: hidden;
       }
-      
-      /* Color-coded section backgrounds and borders - alternating gray and gray */
-      .control-section:nth-child(odd) {
-        background: rgba(97, 99, 102, 0.15);
-        border-color: var(--sinclair-charcoal);
-        border-left: 4px solid var(--sinclair-charcoal);
-      }
-      
-      .control-section:nth-child(even) {
-        background: rgba(97, 99, 102, 0.15);
-        border-color: var(--sinclair-charcoal);
-        border-left: 4px solid var(--sinclair-charcoal);
-      }
-       
+
+
        /* Hover effects for sections */
        .control-section:nth-child(odd):hover {
          background: rgba(97, 99, 102, 0.25);
@@ -1614,10 +1597,10 @@
 
                    .template-preset {
         padding: var(--spacing-xs);
-        border: 2px solid var(--border-color);
-        border-radius: var(--border-radius-sm);
+        border: 2px solid #d5dbe1;
+        border-radius: var(--border-radius-md);
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         text-align: center;
         background: var(--surface-color-solid);
         backdrop-filter: blur(10px);
@@ -1650,20 +1633,28 @@
 
     .template-preset.selected {
       border-color: var(--primary-color);
-      background-color: var(--primary-color);
-      color: white;
+      box-shadow: 0 0 0 2px var(--primary-color), var(--shadow-md);
     }
 
     .template-preview {
       width: 100%;
-      height: 40px;
+      height: 48px;
       margin-bottom: var(--spacing-xs);
       border-radius: var(--border-radius-sm);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 2px;
       font-size: 10px;
       font-weight: bold;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .template-icon {
+      font-size: 16px;
+      line-height: 1;
     }
 
     /* Emoji Suggestions */
@@ -2303,40 +2294,40 @@
             </div>
             <div class="section-content" id="templatesSection">
             <div class="template-presets">
-              <div class="template-preset" onclick="applyTemplate('academic')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #AC1A2F, #8b1526);">Academic</div>
+              <div class="template-preset" data-template="academic" onclick="applyTemplate('academic')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #AC1A2F, #8b1526);"><span class="template-icon">🎓</span>Academic</div>
                 <div>Academic Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('business')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #616366, #4a4d4f);">Business</div>
+              <div class="template-preset" data-template="business" onclick="applyTemplate('business')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #616366, #4a4d4f);"><span class="template-icon">💼</span>Business</div>
                 <div>Business Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('science')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #1C5840, #0f3a2a);">Science</div>
+              <div class="template-preset" data-template="science" onclick="applyTemplate('science')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #1C5840, #0f3a2a);"><span class="template-icon">🔬</span>Science</div>
                 <div>Science Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('arts')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #850054, #6a0043);">Arts</div>
+              <div class="template-preset" data-template="arts" onclick="applyTemplate('arts')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #850054, #6a0043);"><span class="template-icon">🎨</span>Arts</div>
                 <div>Arts Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('technology')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #01A6F0, #0077B5);">Technology</div>
+              <div class="template-preset" data-template="technology" onclick="applyTemplate('technology')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #01A6F0, #0077B5);"><span class="template-icon">💻</span>Technology</div>
                 <div>Technology Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('healthcare')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #00B894, #00A085);">Healthcare</div>
+              <div class="template-preset" data-template="healthcare" onclick="applyTemplate('healthcare')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #00B894, #00A085);"><span class="template-icon">🏥</span>Healthcare</div>
                 <div>Healthcare Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('education')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #6C5CE7, #5B4BC4);">Education</div>
+              <div class="template-preset" data-template="education" onclick="applyTemplate('education')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #6C5CE7, #5B4BC4);"><span class="template-icon">📚</span>Education</div>
                 <div>Education Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('engineering')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #FDCB6E, #E17055);">Engineering</div>
+              <div class="template-preset" data-template="engineering" onclick="applyTemplate('engineering')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #FDCB6E, #E17055);"><span class="template-icon">⚙️</span>Engineering</div>
                 <div>Engineering Course</div>
               </div>
-              <div class="template-preset" onclick="applyTemplate('humanities')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #A29BFE, #8B7EC8);">Humanities</div>
+              <div class="template-preset" data-template="humanities" onclick="applyTemplate('humanities')">
+                <div class="template-preview" style="background: linear-gradient(135deg, #A29BFE, #8B7EC8);"><span class="template-icon">📖</span>Humanities</div>
                 <div>Humanities Course</div>
               </div>
             </div>
@@ -6459,6 +6450,9 @@
         bannerCreator.inputs.fontChoice.value = template.fontChoice;
         bannerCreator.inputs.textAlign.value = template.textAlign;
         bannerCreator.updateBanner();
+        document.querySelectorAll('.template-preset').forEach(preset => {
+          preset.classList.toggle('selected', preset.dataset.template === templateType);
+        });
         bannerCreator.showMessage(`✅ Applied ${templateType} template!`, 'success');
       }
     }
