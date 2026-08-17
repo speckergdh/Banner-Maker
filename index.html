@@ -1302,6 +1302,43 @@
     .placed-icon.selected .placed-icon-delete {
       display: block;
     }
+
+    #placedImagesLayer {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .placed-image {
+      position: absolute;
+      display: block;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      pointer-events: auto;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .placed-image img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    .placed-image.dragging {
+      cursor: grabbing;
+    }
+
+    .placed-image.selected {
+      outline: 2px dashed #ffffff;
+      outline-offset: 4px;
+    }
+
+    .placed-image.selected .placed-icon-delete {
+      display: block;
+    }
     
     #shapeElement.block-left {
       left: 0;
@@ -2118,6 +2155,7 @@
            <div class="crop-overlay" id="cropOverlay">
              <div class="crop-window" id="cropWindow"></div>
            </div>
+           <div id="placedImagesLayer"></div>
            <div id="placedIconsLayer"></div>
 
          </div>
@@ -2666,6 +2704,27 @@
             </div>
           </div>
 
+          <!-- Extra Photos Section -->
+          <div class="control-section">
+            <div class="section-header" onclick="toggleSection('extraImagesSection')">
+              <h3>Extra Photos</h3>
+              <span class="section-toggle" id="extraImagesToggle">▼</span>
+            </div>
+            <div class="section-content" id="extraImagesSection">
+              <div class="form-group">
+                <label for="extraImageUpload">Add photos on top of the banner, then drag each into place. Add as many as you like.</label>
+                <input type="file" id="extraImageUpload" accept="image/*" multiple>
+              </div>
+
+              <div class="form-group" id="placedImageControls" style="display: none;">
+                <label for="placedImageSize">Selected Photo Width (px)</label>
+                <input type="range" id="placedImageSize" value="150" min="40" max="600" step="10">
+                <span id="placedImageSizeValue">150px</span>
+                <button type="button" id="deletePlacedImage" class="btn-remove">Delete Selected Photo</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Custom Icons Section -->
           <div class="control-section">
             <div class="section-header" onclick="toggleSection('customIconsSection')">
@@ -3015,6 +3074,12 @@
         this.selectedIconId = null;
         this.placedIconsLayer = document.getElementById('placedIconsLayer');
         this.iconSvgCache = new Map();
+
+        // Extra photos placed/dragged onto the banner, on top of the single
+        // full-banner background image.
+        this.placedImages = [];
+        this.selectedImageId = null;
+        this.placedImagesLayer = document.getElementById('placedImagesLayer');
       }
 
       // Fetches an icon's raw SVG source once and reuses it - every export
@@ -3201,6 +3266,7 @@
          this.initializeShapeDragging();
          this.initializeLogoDragging();
          this.initializePlacedIconEvents();
+         this.initializePlacedImageEvents();
 
          // Icon controls
          this.initializeIconControls();
@@ -3773,6 +3839,193 @@
        deleteSelectedIcon() {
          if (this.selectedIconId) {
            this.deleteIconById(this.selectedIconId);
+         }
+       }
+
+       initializePlacedImageEvents() {
+         const fileInput = document.getElementById('extraImageUpload');
+         if (fileInput) {
+           fileInput.addEventListener('change', (e) => {
+             Array.from(e.target.files || []).forEach(file => {
+               const reader = new FileReader();
+               reader.onload = (ev) => this.addPlacedImage(ev.target.result);
+               reader.readAsDataURL(file);
+             });
+             fileInput.value = '';
+           });
+         }
+
+         const sizeSlider = document.getElementById('placedImageSize');
+         if (sizeSlider) {
+           sizeSlider.addEventListener('input', () => {
+             const image = this.placedImages.find(i => i.id === this.selectedImageId);
+             if (!image) return;
+             image.widthPx = parseInt(sizeSlider.value);
+             document.getElementById('placedImageSizeValue').textContent = `${image.widthPx}px`;
+             const el = this.placedImagesLayer.querySelector(`[data-image-id="${image.id}"]`);
+             if (el) {
+               el.style.width = `${image.widthPx}px`;
+               el.style.height = `${image.widthPx / image.aspectRatio}px`;
+             }
+           });
+         }
+
+         const deleteBtn = document.getElementById('deletePlacedImage');
+         if (deleteBtn) {
+           deleteBtn.addEventListener('click', () => this.deleteSelectedImage());
+         }
+
+         // Deselect when clicking anywhere on the banner that isn't a photo
+         this.preview.banner.addEventListener('mousedown', (e) => {
+           if (!e.target.closest('.placed-image')) {
+             this.selectPlacedImage(null);
+           }
+         });
+       }
+
+       addPlacedImage(url) {
+         const probe = new Image();
+         probe.onload = () => {
+           const id = `image-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+           const count = this.placedImages.length;
+           const aspectRatio = probe.naturalWidth / probe.naturalHeight || 1;
+           const widthPx = 150;
+           const image = {
+             id,
+             url,
+             xPercent: Math.max(15, Math.min(85, 50 + (count % 5) * 8 - 16)),
+             yPercent: Math.max(20, Math.min(80, 50 + (count % 3) * 10 - 10)),
+             widthPx,
+             aspectRatio
+           };
+           this.placedImages.push(image);
+
+           const el = document.createElement('div');
+           el.className = 'placed-image';
+           el.dataset.imageId = id;
+           el.style.left = `${image.xPercent}%`;
+           el.style.top = `${image.yPercent}%`;
+           el.style.width = `${widthPx}px`;
+           el.style.height = `${widthPx / aspectRatio}px`;
+
+           const img = document.createElement('img');
+           img.src = url;
+           img.alt = 'Uploaded photo';
+           el.appendChild(img);
+
+           const deleteBadge = document.createElement('span');
+           deleteBadge.className = 'placed-icon-delete';
+           deleteBadge.textContent = '×';
+           deleteBadge.addEventListener('mousedown', (e) => e.stopPropagation());
+           deleteBadge.addEventListener('click', (e) => {
+             e.stopPropagation();
+             this.deleteImageById(id);
+           });
+           el.appendChild(deleteBadge);
+
+           this.attachPlacedImageDrag(el, image);
+           this.placedImagesLayer.appendChild(el);
+
+           this.selectPlacedImage(id);
+           this.showMessage('✅ Photo added - drag it into place', 'success');
+         };
+         probe.onerror = () => {
+           console.error('Error loading uploaded photo');
+           this.showMessage('❌ Error loading photo', 'error');
+         };
+         probe.src = url;
+       }
+
+       attachPlacedImageDrag(el, image) {
+         const controller = new AbortController();
+         el._dragController = controller;
+         let isDragging = false;
+         let startX = 0;
+         let startY = 0;
+         let startXPercent = 0;
+         let startYPercent = 0;
+
+         const startDrag = (clientX, clientY) => {
+           this.selectPlacedImage(image.id);
+           isDragging = true;
+           startX = clientX;
+           startY = clientY;
+           startXPercent = image.xPercent;
+           startYPercent = image.yPercent;
+           el.classList.add('dragging');
+         };
+
+         const moveDrag = (clientX, clientY) => {
+           if (!isDragging) return;
+           const rect = this.preview.banner.getBoundingClientRect();
+           image.xPercent = Math.max(0, Math.min(100, startXPercent + ((clientX - startX) / rect.width) * 100));
+           image.yPercent = Math.max(0, Math.min(100, startYPercent + ((clientY - startY) / rect.height) * 100));
+           el.style.left = `${image.xPercent}%`;
+           el.style.top = `${image.yPercent}%`;
+         };
+
+         const endDrag = () => {
+           if (isDragging) {
+             isDragging = false;
+             el.classList.remove('dragging');
+           }
+         };
+
+         el.addEventListener('mousedown', (e) => {
+           startDrag(e.clientX, e.clientY);
+           e.preventDefault();
+           e.stopPropagation();
+         }, { signal: controller.signal });
+         window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY), { signal: controller.signal });
+         window.addEventListener('mouseup', endDrag, { signal: controller.signal });
+
+         el.addEventListener('touchstart', (e) => {
+           const touch = e.touches[0];
+           startDrag(touch.clientX, touch.clientY);
+           e.stopPropagation();
+         }, { signal: controller.signal, passive: true });
+         window.addEventListener('touchmove', (e) => {
+           if (!isDragging) return;
+           const touch = e.touches[0];
+           moveDrag(touch.clientX, touch.clientY);
+         }, { signal: controller.signal, passive: true });
+         window.addEventListener('touchend', endDrag, { signal: controller.signal });
+       }
+
+       selectPlacedImage(id) {
+         this.selectedImageId = id;
+         this.placedImagesLayer.querySelectorAll('.placed-image').forEach(el => {
+           el.classList.toggle('selected', el.dataset.imageId === id);
+         });
+
+         const controls = document.getElementById('placedImageControls');
+         const image = this.placedImages.find(i => i.id === id);
+         if (image && controls) {
+           controls.style.display = 'block';
+           const sizeSlider = document.getElementById('placedImageSize');
+           const sizeValue = document.getElementById('placedImageSizeValue');
+           if (sizeSlider) sizeSlider.value = image.widthPx;
+           if (sizeValue) sizeValue.textContent = `${image.widthPx}px`;
+         } else if (controls) {
+           controls.style.display = 'none';
+         }
+       }
+
+       deleteImageById(id) {
+         this.placedImages = this.placedImages.filter(i => i.id !== id);
+         const el = this.placedImagesLayer.querySelector(`[data-image-id="${id}"]`);
+         if (el) {
+           if (el._dragController) el._dragController.abort();
+           el.remove();
+         }
+         if (this.selectedImageId === id) {
+           this.selectPlacedImage(null);
+         }
+       }
+
+       deleteSelectedImage() {
+         if (this.selectedImageId) {
+           this.deleteImageById(this.selectedImageId);
          }
        }
 
@@ -4497,6 +4750,7 @@
          const logoType = this.inputs.logoType ? this.inputs.logoType.value : 'upload';
          const hasIcon = logoType === 'icon';
          const shapeHTML = this.buildShapeHTMLString(exportDims.width, exportDims.height);
+         const imagesHTML = this.buildPlacedImagesHTMLString();
          const iconsHTML = await this.buildPlacedIconsHTMLString();
 
          return `<!DOCTYPE html>
@@ -4516,12 +4770,13 @@
         ${hasLogo ? `<img src="logo.png" alt="Logo" style="${isAnyAutoWidth ? 'flex-shrink: 0; width: ' + logoSize + 'px; height: auto;' : 'position: absolute; right: 20px; top: 20px; width: ' + logoSize + 'px; height: auto;'}">` : ''}
         ${hasIcon ? `<div style="${isAnyAutoWidth ? 'flex-shrink: 0; font-size: ' + logoSize + 'px;' : 'position: absolute; right: 20px; top: 20px; font-size: ' + logoSize + 'px;'} line-height: 1;">${this.currentIcon || '🎓'}</div>` : ''}
         ${shapeHTML}
+        ${imagesHTML}
         ${iconsHTML}
     </div>
 </body>
 </html>`;
        }
-       
+
        updateOffsetControlsFromDrag(dragX, dragY) {
          // Convert pixel drag position to offset values (-50 to 50 range)
          const bannerRect = this.preview.banner.getBoundingClientRect();
@@ -5080,6 +5335,14 @@
          return parts.join('\n        ');
        }
 
+       // Extra photos are already data URIs (from file upload) so no fetch
+       // is needed - just embed them directly as <img> tags.
+       buildPlacedImagesHTMLString() {
+         return this.placedImages.map(image =>
+           `<img src="${image.url}" alt="" style="position:absolute; left:${image.xPercent}%; top:${image.yPercent}%; width:${image.widthPx}px; height:${image.widthPx / image.aspectRatio}px; transform:translate(-50%, -50%); object-fit:contain; z-index:4;">`
+         ).join('\n        ');
+       }
+
        toggleShapeGradientControls() {
          const shapeGradientControls = document.getElementById('shapeGradientControls');
          if (this.inputs.shapeGradientEnabled && this.inputs.shapeGradientEnabled.checked) {
@@ -5356,120 +5619,44 @@
               bgImg.crossOrigin = 'anonymous';
 
               bgImg.onload = () => {
-                // Get the actual CSS properties from the preview
-                const bgImageStyle = getComputedStyle(this.preview.bgImage);
-                const objectFit = bgImageStyle.objectFit || 'cover';
-                const objectPosition = bgImageStyle.objectPosition || 'center';
-                
-                
-                // Calculate how to draw the image based on object-fit and object-position
-                let drawWidth, drawHeight, drawX, drawY;
-                
-                // Parse object-position to get x and y percentages
-                let xPercent = 50, yPercent = 50; // Default center
-                if (objectPosition) {
-                  const positionParts = objectPosition.split(' ');
-                  if (positionParts.length >= 2) {
-                    xPercent = parseFloat(positionParts[0]) || 50;
-                    yPercent = parseFloat(positionParts[1]) || 50;
-                  } else if (positionParts.length === 1) {
-                    // Single value applies to both x and y
-                    const value = parseFloat(positionParts[0]) || 50;
-                    xPercent = value;
-                    yPercent = value;
-                  }
-                }
-                
-                if (objectFit === 'cover') {
-                  // Calculate aspect ratios
-                  const canvasAspect = originalWidth / originalHeight;
-                  const imgAspect = bgImg.width / bgImg.height;
-                  
-                  if (imgAspect > canvasAspect) {
-                    // Image is wider - fit to height, crop width
-                    drawHeight = originalHeight;
-                    drawWidth = originalHeight * imgAspect;
-                    drawX = (originalWidth - drawWidth) * (xPercent / 100);
-                    drawY = 0;
-                  } else {
-                    // Image is taller - fit to width, crop height
-                    drawWidth = originalWidth;
-                    drawHeight = originalWidth / imgAspect;
-                    drawX = 0;
-                    drawY = (originalHeight - drawHeight) * (yPercent / 100);
-                  }
-                } else if (objectFit === 'contain') {
-                  // Fit entire image within canvas
-                  const canvasAspect = originalWidth / originalHeight;
-                  const imgAspect = bgImg.width / bgImg.height;
-                  
-                  if (imgAspect > canvasAspect) {
-                    // Image is wider - fit to width
-                    drawWidth = originalWidth;
-                    drawHeight = originalWidth / imgAspect;
-                    drawX = 0;
-                    drawY = (originalHeight - drawHeight) * (yPercent / 100);
-                  } else {
-                    // Image is taller - fit to height
-                    drawHeight = originalHeight;
-                    drawWidth = originalHeight * imgAspect;
-                    drawX = (originalWidth - drawWidth) * (xPercent / 100);
-                    drawY = 0;
-                  }
-                } else if (objectFit === 'fill') {
-                  // Stretch to fill
-                  drawWidth = originalWidth;
-                  drawHeight = originalHeight;
-                  drawX = 0;
-                  drawY = 0;
-                } else {
-                  // Default to cover behavior
-                  const canvasAspect = originalWidth / originalHeight;
-                  const imgAspect = bgImg.width / bgImg.height;
-                  
-                  if (imgAspect > canvasAspect) {
-                    drawHeight = originalHeight;
-                    drawWidth = originalHeight * imgAspect;
-                    drawX = (originalWidth - drawWidth) * (xPercent / 100);
-                    drawY = 0;
-                  } else {
-                    drawWidth = originalWidth;
-                    drawHeight = originalWidth / imgAspect;
-                    drawX = 0;
-                    drawY = (originalHeight - drawHeight) * (yPercent / 100);
-                  }
-                }
-                
-                // Apply the zoom slider the same way the live preview does:
-                // a CSS transform:scale() centered on the banner, layered on
-                // top of the cover/contain-fit rectangle above. "fill" mode
-                // skips this in the live preview too, since object-fit:fill
-                // already stretches to the full box on its own.
-                if (objectFit !== 'fill') {
-                  const bgImageScale = this.inputs.bgImageScale ? this.inputs.bgImageScale.value : 100;
-                  const zoom = this.computeZoomScaleForDimensions(
-                    parseInt(bgImageScale), bgImg.width, bgImg.height, originalWidth, originalHeight
-                  );
-                  const centerX = originalWidth / 2;
-                  const centerY = originalHeight / 2;
-                  const newDrawWidth = drawWidth * zoom;
-                  const newDrawHeight = drawHeight * zoom;
-                  drawX = centerX + (drawX - centerX) * zoom;
-                  drawY = centerY + (drawY - centerY) * zoom;
-                  drawWidth = newDrawWidth;
-                  drawHeight = newDrawHeight;
-                }
+                // Read straight from the actual controls and reuse the same
+                // computeBgImageRect() the live preview uses - reading this
+                // back from getComputedStyle() used to work when the preview
+                // relied on object-fit/object-position, but it always
+                // reported 'fill' / '50% 50%' once the preview switched to
+                // explicit width/height/left/top, silently ignoring the
+                // user's actual Image Fit choice and drag position (export
+                // always stretched like "Fill" and always centered).
+                const bgImageFit = this.inputs.bgImageFit ? this.inputs.bgImageFit.value : 'cover';
+                const bgImagePosition = this.inputs.bgImagePosition ? this.inputs.bgImagePosition.value : 'center';
+                const bgImageXOffset = this.inputs.bgImageXOffset ? parseInt(this.inputs.bgImageXOffset.value) : 0;
+                const bgImageYOffset = this.inputs.bgImageYOffset ? parseInt(this.inputs.bgImageYOffset.value) : 0;
+                const bgImageScale = this.inputs.bgImageScale ? parseInt(this.inputs.bgImageScale.value) : 100;
+
+                let xPercent = 50;
+                let yPercent = 50;
+                if (bgImagePosition.includes('left')) xPercent = 0;
+                else if (bgImagePosition.includes('right')) xPercent = 100;
+                if (bgImagePosition.includes('top')) yPercent = 0;
+                else if (bgImagePosition.includes('bottom')) yPercent = 100;
+                xPercent = Math.max(0, Math.min(100, xPercent + bgImageXOffset));
+                yPercent = Math.max(0, Math.min(100, yPercent + bgImageYOffset));
+
+                const rect = this.computeBgImageRect(
+                  bgImg.width, bgImg.height, originalWidth, originalHeight,
+                  bgImageFit, xPercent, yPercent, bgImageScale
+                );
 
                 // Apply opacity
                 const bgImageOpacity = this.inputs.bgImageOpacity ? this.inputs.bgImageOpacity.value : 100;
                 ctx.globalAlpha = bgImageOpacity / 100;
 
                 // Draw background image with proper fitting and positioning
-                ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
-                
+                ctx.drawImage(bgImg, rect.left, rect.top, rect.width, rect.height);
+
                 // Reset alpha for other elements
                 ctx.globalAlpha = 1.0;
-                
+
                 this.drawShapesAndText(ctx, canvas, originalWidth, originalHeight);
                 this.drawLogoAndDownload(ctx, canvas, originalWidth, originalHeight);
               };
@@ -5870,9 +6057,31 @@
           }
         }
 
+        async drawPlacedImagesOnCanvas(ctx, originalWidth, originalHeight) {
+          for (const placedImage of this.placedImages) {
+            try {
+              const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = placedImage.url;
+              });
+              const width = placedImage.widthPx;
+              const height = placedImage.widthPx / placedImage.aspectRatio;
+              const x = (placedImage.xPercent / 100) * originalWidth - width / 2;
+              const y = (placedImage.yPercent / 100) * originalHeight - height / 2;
+              ctx.drawImage(img, x, y, width, height);
+            } catch (error) {
+              console.error('Error drawing placed photo:', error);
+            }
+          }
+        }
+
         async drawLogoAndDownload(ctx, canvas, originalWidth, originalHeight) {
-          // Draw any custom icons the user dropped onto the banner first, so
-          // the logo/download step below still has the final word visually.
+          // Draw any extra photos and custom icons the user dropped onto the
+          // banner first, so the logo/download step below still has the
+          // final word visually.
+          await this.drawPlacedImagesOnCanvas(ctx, originalWidth, originalHeight);
           await this.drawPlacedIconsOnCanvas(ctx, originalWidth, originalHeight);
 
           // Check for logo type
@@ -6207,6 +6416,7 @@
            const logoType = this.inputs.logoType ? this.inputs.logoType.value : 'upload';
            const hasIcon = logoType === 'icon';
            const shapeHTML = this.buildShapeHTMLString(exportDims.width, exportDims.height);
+           const imagesHTML = this.buildPlacedImagesHTMLString();
            const iconsHTML = await this.buildPlacedIconsHTMLString();
 
            // Generate HTML
@@ -6227,6 +6437,7 @@
         ${hasLogo ? `<img src="logo.png" alt="Logo" style="position: absolute; right: 20px; top: 20px; width: ${logoSize}px; height: auto;">` : ''}
         ${hasIcon ? `<div style="position: absolute; right: 20px; top: 20px; font-size: ${logoSize}px; color: ${this.inputs.iconColor ? this.inputs.iconColor.value : '#ffffff'}; line-height: 1;">${this.inputs.iconEmoji ? this.inputs.iconEmoji.value : '🎓'}</div>` : ''}
         ${shapeHTML}
+        ${imagesHTML}
         ${iconsHTML}
     </div>
 </body>
@@ -6849,75 +7060,41 @@
           
           const bgImageFit = this.inputs.bgImageFit ? this.inputs.bgImageFit.value : 'cover';
           const bgImagePosition = this.inputs.bgImagePosition ? this.inputs.bgImagePosition.value : 'center';
-          const bgImageXOffset = this.inputs.bgImageXOffset ? this.inputs.bgImageXOffset.value : '0';
-          const bgImageYOffset = this.inputs.bgImageYOffset ? this.inputs.bgImageYOffset.value : '0';
-          const bgImageScale = this.inputs.bgImageScale ? this.inputs.bgImageScale.value : '100';
+          const bgImageXOffset = this.inputs.bgImageXOffset ? parseInt(this.inputs.bgImageXOffset.value) : 0;
+          const bgImageYOffset = this.inputs.bgImageYOffset ? parseInt(this.inputs.bgImageYOffset.value) : 0;
+          const bgImageScale = this.inputs.bgImageScale ? parseInt(this.inputs.bgImageScale.value) : 100;
           const bgImageOpacity = this.inputs.bgImageOpacity ? this.inputs.bgImageOpacity.value : '100';
-          
-          // Calculate position with offset (same logic as preview)
-          const basePosition = bgImagePosition;
-          const xOffset = parseInt(bgImageXOffset);
-          const yOffset = parseInt(bgImageYOffset);
-          
-          // Create custom position string with offset
-          let customPosition = basePosition;
-          if (xOffset !== 0 || yOffset !== 0) {
-            // Convert position to percentage and add offset
-            let xPercent = 50; // default center
-            let yPercent = 50; // default center
-            
-            // Parse base position
-            if (basePosition.includes('left')) xPercent = 0;
-            else if (basePosition.includes('right')) xPercent = 100;
-            if (basePosition.includes('top')) yPercent = 0;
-            else if (basePosition.includes('bottom')) yPercent = 100;
-            
-            // Offset is already on a -50..50 scale, so it applies directly
-            xPercent = Math.max(0, Math.min(100, xPercent + xOffset));
-            yPercent = Math.max(0, Math.min(100, yPercent + yOffset));
 
-            customPosition = `${xPercent}% ${yPercent}%`;
-          }
-          
-          // For "fill" option, don't use scale transform, let object-fit handle it
-          if (bgImageFit === 'fill') {
-            bgImage.style.cssText = `
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              object-position: ${customPosition};
-              transform: none;
-              z-index: 0;
-              opacity: ${bgImageOpacity / 100};
-              overflow: hidden;
-            `;
-          } else {
-            // Below 100% this interpolates toward showing the full image
-            // (contain-fit) instead of just shrinking the cover-fit crop -
-            // same math as the live preview, just against export dimensions.
-            const maxScale = this.computeZoomScaleForDimensions(
-              parseInt(bgImageScale), this.preview.bgImage.naturalWidth, this.preview.bgImage.naturalHeight,
-              exportDims.width, exportDims.height
-            );
+          // Same explicit width/height/left/top approach as the live
+          // preview - transform:scale() on an object-fit box scales the
+          // box itself (locked to the export's aspect ratio), not the
+          // object-fit content, so it can't actually reveal more of the
+          // photo when zoomed out or honor the real crop.
+          let xPercent = 50;
+          let yPercent = 50;
+          if (bgImagePosition.includes('left')) xPercent = 0;
+          else if (bgImagePosition.includes('right')) xPercent = 100;
+          if (bgImagePosition.includes('top')) yPercent = 0;
+          else if (bgImagePosition.includes('bottom')) yPercent = 100;
+          xPercent = Math.max(0, Math.min(100, xPercent + bgImageXOffset));
+          yPercent = Math.max(0, Math.min(100, yPercent + bgImageYOffset));
 
-            bgImage.style.cssText = `
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              object-fit: ${bgImageFit};
-              object-position: ${customPosition};
-              transform: scale(${maxScale});
-              transform-origin: center center;
-              z-index: 0;
-              opacity: ${bgImageOpacity / 100};
-              overflow: hidden;
-            `;
-          }
+          const bgRect = this.computeBgImageRect(
+            this.preview.bgImage.naturalWidth, this.preview.bgImage.naturalHeight,
+            exportDims.width, exportDims.height, bgImageFit, xPercent, yPercent, bgImageScale
+          );
+
+          bgImage.style.cssText = `
+            position: absolute;
+            left: ${bgRect.left}px;
+            top: ${bgRect.top}px;
+            width: ${bgRect.width}px;
+            height: ${bgRect.height}px;
+            object-fit: fill;
+            z-index: 0;
+            opacity: ${bgImageOpacity / 100};
+            overflow: hidden;
+          `;
           banner.appendChild(bgImage);
         }
         
@@ -6949,6 +7126,23 @@
             z-index: 3;
           `;
           banner.appendChild(logo);
+        }
+
+        // Add any extra photos the user has placed and dragged onto the banner
+        for (const image of this.placedImages) {
+          const imageEl = document.createElement('img');
+          imageEl.src = image.url;
+          imageEl.style.cssText = `
+            position: absolute;
+            left: ${image.xPercent}%;
+            top: ${image.yPercent}%;
+            width: ${image.widthPx}px;
+            height: ${image.widthPx / image.aspectRatio}px;
+            transform: translate(-50%, -50%);
+            object-fit: contain;
+            z-index: 4;
+          `;
+          banner.appendChild(imageEl);
         }
 
         // Add any custom icons the user has placed and dragged onto the banner
@@ -7146,6 +7340,7 @@
        const collapsedByDefault = [
          'imagesSection',
          'shapeSection',
+         'extraImagesSection',
          'customIconsSection',
          'exportOptionsSection'
        ];
