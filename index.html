@@ -36,7 +36,8 @@
          /* LSS Variables for Sinclair Brand Colors + Bootstrap Theme */
      :root {
        /* Sinclair Brand Colors */
-       --sinclair-red: #0b325c;
+       --sinclair-red: #AC1A2F;
+       --sinclair-navy: #0b325c;
        --sinclair-charcoal: #616366;
        --sinclair-black: #000000;
        --sinclair-royal-blue: #130078;
@@ -44,9 +45,10 @@
        --sinclair-aqua: #01A6F0;
        --sinclair-purple: #850054;
        --sinclair-mint: #007972;
-       
-       /* UI Colors */
-       --primary-color: var(--sinclair-red);
+
+       /* UI Colors - app's own chrome uses navy, not the "Sinclair Red" the
+          color pickers expose to users */
+       --primary-color: var(--sinclair-navy);
        --primary-color-dark: #061a2e;
        --secondary-color: var(--sinclair-charcoal);
        --background-color: #0a0a0a;
@@ -58,7 +60,7 @@
        --text-color: var(--text-primary);
        
        /* Bootstrap Theme Customization */
-       --bs-primary: var(--sinclair-red);
+       --bs-primary: var(--sinclair-navy);
        --bs-secondary: var(--sinclair-charcoal);
        --bs-success: var(--sinclair-green);
        --bs-info: var(--sinclair-aqua);
@@ -226,7 +228,7 @@
       }
       
       .customization-title {
-        background: var(--sinclair-red);
+        background: var(--sinclair-navy);
         color: white !important;
         font-size: 2rem;
         font-weight: 800;
@@ -1046,7 +1048,7 @@
          align-items: center;
          justify-content: space-between;
          overflow: visible;
-         background-color: var(--sinclair-red);
+         background-color: var(--sinclair-navy);
          padding: var(--spacing-md);
          border-radius: var(--border-radius-md);
          box-shadow: var(--shadow-lg), var(--shadow-glow);
@@ -3254,43 +3256,79 @@
            }
          };
          
-         // Handle click to position image
-         cropOverlay.addEventListener('click', (e) => {
-           if (bgImage.style.display !== 'none' && bgImage.src) {
-             const rect = cropOverlay.getBoundingClientRect();
-             const clickX = e.clientX - rect.left;
-             const clickY = e.clientY - rect.top;
-             
-             // Calculate position as percentage
-             const xPercent = (clickX / rect.width) * 100;
-             const yPercent = (clickY / rect.height) * 100;
-             
-             // Apply object-position to center the image at click point
-             bgImage.style.objectPosition = `${xPercent}% ${yPercent}%`;
-             
-             // Update offset controls
-             const xOffset = Math.round((xPercent - 50) * 2); // Convert to -50 to +50 range
-             const yOffset = Math.round((yPercent - 50) * 2);
-             
-             if (this.inputs.bgImageXOffset) {
-               this.inputs.bgImageXOffset.value = Math.max(-50, Math.min(50, xOffset));
-               if (this.bgImageXOffsetValue) {
-                 this.bgImageXOffsetValue.textContent = this.inputs.bgImageXOffset.value;
-               }
-             }
-             
-             if (this.inputs.bgImageYOffset) {
-               this.inputs.bgImageYOffset.value = Math.max(-50, Math.min(50, yOffset));
-               if (this.bgImageYOffsetValue) {
-                 this.bgImageYOffsetValue.textContent = this.inputs.bgImageYOffset.value;
-               }
+         // Drag to pan the image smoothly (a single click used to teleport the
+         // image straight to the click point with no fine control - this tracks
+         // the drag delta as an offset instead, same math the sliders use).
+         let isDraggingImage = false;
+         let dragStartX = 0;
+         let dragStartY = 0;
+         let dragStartXOffset = 0;
+         let dragStartYOffset = 0;
+
+         cropOverlay.style.cursor = 'grab';
+
+         const startDrag = (clientX, clientY) => {
+           if (bgImage.style.display === 'none' || !bgImage.src) return;
+           isDraggingImage = true;
+           dragStartX = clientX;
+           dragStartY = clientY;
+           dragStartXOffset = this.inputs.bgImageXOffset ? parseInt(this.inputs.bgImageXOffset.value) : 0;
+           dragStartYOffset = this.inputs.bgImageYOffset ? parseInt(this.inputs.bgImageYOffset.value) : 0;
+           cropOverlay.style.cursor = 'grabbing';
+         };
+
+         const moveDrag = (clientX, clientY) => {
+           if (!isDraggingImage) return;
+           const rect = cropOverlay.getBoundingClientRect();
+           const deltaXPercent = ((clientX - dragStartX) / rect.width) * 100;
+           const deltaYPercent = ((clientY - dragStartY) / rect.height) * 100;
+
+           const newXOffset = Math.max(-50, Math.min(50, Math.round(dragStartXOffset + deltaXPercent)));
+           const newYOffset = Math.max(-50, Math.min(50, Math.round(dragStartYOffset + deltaYPercent)));
+
+           if (this.inputs.bgImageXOffset) {
+             this.inputs.bgImageXOffset.value = newXOffset;
+             if (this.bgImageXOffsetValue) {
+               this.bgImageXOffsetValue.textContent = newXOffset;
              }
            }
+           if (this.inputs.bgImageYOffset) {
+             this.inputs.bgImageYOffset.value = newYOffset;
+             if (this.bgImageYOffsetValue) {
+               this.bgImageYOffsetValue.textContent = newYOffset;
+             }
+           }
+           this.updateBanner();
+         };
+
+         const endDrag = () => {
+           if (isDraggingImage) {
+             isDraggingImage = false;
+             cropOverlay.style.cursor = 'grab';
+           }
+         };
+
+         cropOverlay.addEventListener('mousedown', (e) => {
+           startDrag(e.clientX, e.clientY);
+           e.preventDefault();
          });
-         
+         window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+         window.addEventListener('mouseup', endDrag);
+
+         cropOverlay.addEventListener('touchstart', (e) => {
+           const touch = e.touches[0];
+           startDrag(touch.clientX, touch.clientY);
+         }, { passive: true });
+         window.addEventListener('touchmove', (e) => {
+           if (!isDraggingImage) return;
+           const touch = e.touches[0];
+           moveDrag(touch.clientX, touch.clientY);
+         }, { passive: true });
+         window.addEventListener('touchend', endDrag);
+
          // Show crop interface when image is loaded
          bgImage.addEventListener('load', showCropInterface);
-         
+
          // Initial setup
          showCropInterface();
        }
@@ -4520,10 +4558,10 @@
               if (basePosition.includes('top')) yPercent = 0;
               else if (basePosition.includes('bottom')) yPercent = 100;
               
-              // Add offset (convert -50 to 50 range to percentage)
-              xPercent = Math.max(0, Math.min(100, xPercent + (xOffset + 50)));
-              yPercent = Math.max(0, Math.min(100, yPercent + (yOffset + 50)));
-              
+              // Offset is already on a -50..50 scale, so it applies directly
+              xPercent = Math.max(0, Math.min(100, xPercent + xOffset));
+              yPercent = Math.max(0, Math.min(100, yPercent + yOffset));
+
               customPosition = `${xPercent}% ${yPercent}%`;
             }
             
@@ -6053,10 +6091,10 @@
             if (basePosition.includes('top')) yPercent = 0;
             else if (basePosition.includes('bottom')) yPercent = 100;
             
-            // Add offset (convert -50 to 50 range to percentage)
-            xPercent = Math.max(0, Math.min(100, xPercent + (xOffset + 50)));
-            yPercent = Math.max(0, Math.min(100, yPercent + (yOffset + 50)));
-            
+            // Offset is already on a -50..50 scale, so it applies directly
+            xPercent = Math.max(0, Math.min(100, xPercent + xOffset));
+            yPercent = Math.max(0, Math.min(100, yPercent + yOffset));
+
             customPosition = `${xPercent}% ${yPercent}%`;
           }
           
