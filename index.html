@@ -1097,10 +1097,12 @@
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.3);
-      /* Above #bannerTextContainer (z-index: 2) so drag-to-reposition can be
-         grabbed anywhere over the banner, not just the strip behind the text */
       z-index: 5;
-      cursor: crosshair;
+      /* Purely a visual scrim now - dragging is handled by #bgImage directly
+         (z-index: 1) so it doesn't fight shapes/icons layered above it for
+         clicks; text sits at z-index: 2, above the image but below shapes
+         (3) and icons (6), which stay grabbable wherever they are. */
+      pointer-events: none;
       display: none;
     }
     
@@ -1185,6 +1187,10 @@
       overflow: visible;
       word-wrap: break-word;
       hyphens: auto;
+      /* Display-only text, never needs to capture clicks - lets drag
+         gestures for the background image/shapes/icons pass through to
+         whichever of those layers is actually underneath the cursor */
+      pointer-events: none;
     }
 
          #bannerTitle, #bannerSubtitle2, #bannerSubtitle3 {
@@ -1227,8 +1233,62 @@
     
     #shapeElement {
       position: absolute;
-      z-index: 1;
-      transition: all 0.3s ease;
+      /* Above #bannerTextContainer (z-index: 2) so it's always grabbable to
+         drag, even when positioned centrally over the text */
+      z-index: 3;
+      cursor: grab;
+      transition: background 0.3s ease, opacity 0.3s ease;
+    }
+
+    #shapeElement.dragging {
+      cursor: grabbing;
+      transition: none;
+    }
+
+    #placedIconsLayer {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .placed-icon {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      pointer-events: auto;
+      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+    }
+
+    .placed-icon.dragging {
+      cursor: grabbing;
+    }
+
+    .placed-icon.selected {
+      outline: 2px dashed #ffffff;
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+
+    .placed-icon-delete {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #AC1A2F;
+      color: white;
+      font-size: 12px;
+      line-height: 18px;
+      text-align: center;
+      cursor: pointer;
+      display: none;
+      pointer-events: auto;
+    }
+
+    .placed-icon.selected .placed-icon-delete {
+      display: block;
     }
     
     #shapeElement.block-left {
@@ -1687,139 +1747,6 @@
       transform: scale(1.1);
     }
 
-    /* New Features Popup */
-    .popup-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-      backdrop-filter: blur(5px);
-    }
-
-    .popup-content {
-      background: var(--surface-color-solid);
-      border-radius: var(--border-radius-lg);
-      box-shadow: var(--shadow-xl);
-      max-width: 500px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-      border: 2px solid var(--primary-color);
-      position: relative;
-    }
-
-    .popup-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: var(--spacing-lg);
-      border-bottom: 1px solid var(--border-color);
-      background: linear-gradient(135deg, var(--primary-color), #061a2e);
-      color: white;
-      border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-    }
-
-    .popup-header h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    .popup-close {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 2rem;
-      cursor: pointer;
-      padding: 0;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: all 0.2s ease;
-    }
-
-    .popup-close:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: scale(1.1);
-    }
-
-    .popup-body {
-      padding: var(--spacing-lg);
-    }
-
-    .feature-item {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: var(--spacing-md);
-      padding: var(--spacing-md) var(--spacing-lg);
-      border-radius: var(--border-radius-sm);
-      background: rgba(11, 50, 92, 0.05);
-      border-left: 4px solid var(--primary-color);
-    }
-
-    .feature-icon {
-      font-size: 2rem;
-      margin-right: var(--spacing-md);
-      flex-shrink: 0;
-    }
-
-    .feature-text h3 {
-      margin: 0 0 var(--spacing-xs) 0;
-      color: var(--primary-color);
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .feature-text p {
-      margin: 0;
-      color: var(--text-secondary);
-      line-height: 1.4;
-    }
-
-    .feature-demo {
-      margin-top: var(--spacing-lg);
-      padding: var(--spacing-md);
-      background: rgba(11, 50, 92, 0.1);
-      border-radius: var(--border-radius-sm);
-      border: 1px solid var(--border-color);
-    }
-
-    .feature-demo p {
-      margin: 0 0 var(--spacing-sm) 0;
-      font-weight: 600;
-      color: var(--primary-color);
-    }
-
-    .feature-demo ol {
-      margin: 0;
-      padding-left: var(--spacing-md);
-      color: var(--text-secondary);
-    }
-
-    .feature-demo li {
-      margin-bottom: var(--spacing-xs);
-      line-height: 1.4;
-    }
-
-    .popup-footer {
-      padding: var(--spacing-lg);
-      border-top: 1px solid var(--border-color);
-      text-align: center;
-    }
-
-    .popup-footer .btn {
-      min-width: 120px;
-    }
-
     /* Help Panel */
 .help-panel {
   position: fixed;
@@ -2159,58 +2086,6 @@
         <div class="version-info" id="versionInfo"></div>
      </div>
      
-     <!-- New Features Popup -->
-     <div id="newFeaturesPopup" class="popup-overlay">
-       <div class="popup-content">
-         <div class="popup-header">
-           <h2>New Features Available!</h2>
-           <button class="popup-close" onclick="closeNewFeaturesPopup()">×</button>
-         </div>
-         <div class="popup-body">
-           <div class="feature-item">
-             <div class="feature-text">
-               <h3>HTML Export for Canvas LMS</h3>
-               <p>Export banners as HTML code with inline styles for direct use in Canvas LMS. No external dependencies required - perfect for Canvas compatibility!</p>
-             </div>
-           </div>
-           <div class="feature-item">
-             <div class="feature-text">
-               <h3>Bootstrap 5 UI Framework</h3>
-               <p>Complete UI overhaul with professional Bootstrap styling, responsive design, and modern components for a better user experience.</p>
-             </div>
-           </div>
-           <div class="feature-item">
-             <div class="feature-text">
-               <h3>Unsplash Integration</h3>
-               <p>Search and use high-quality images directly from Unsplash. No more hunting for background images - just search and click!</p>
-             </div>
-           </div>
-           <div class="feature-item">
-             <div class="feature-text">
-               <h3>Smart Tooltips & Help</h3>
-               <p>Interactive tooltips on buttons and a comprehensive help panel with Canvas LMS integration tips and best practices.</p>
-             </div>
-           </div>
-           <div class="feature-item">
-             <div class="feature-text">
-               <h3>Responsive Design</h3>
-               <p>Fully responsive interface that works perfectly on desktop, tablet, and mobile devices with auto-adapting layouts.</p>
-             </div>
-           </div>
-           <div class="feature-item">
-             <div class="feature-text">
-               <h3>Enhanced Export System</h3>
-               <p>Improved export system with progress bars, multiple formats (PNG, PDF, JPG, WebP, SVG, HTML), and better Canvas integration.</p>
-             </div>
-           </div>
-
-         </div>
-         <div class="popup-footer">
-           <button class="btn btn-primary" onclick="closeNewFeaturesPopup()">Got it!</button>
-         </div>
-       </div>
-     </div>
-
     <!-- Main Content -->
     <div class="main-content">
       <!-- Preview Panel -->
@@ -2231,6 +2106,7 @@
            <div class="crop-overlay" id="cropOverlay">
              <div class="crop-window" id="cropWindow"></div>
            </div>
+           <div id="placedIconsLayer"></div>
 
          </div>
         </div>
@@ -2754,7 +2630,12 @@
                   <option value="outset">Outset</option>
                 </select>
               </div>
-              
+
+              <div class="form-group">
+                <label>Drag the shape directly on the banner to fine-tune its position</label>
+                <button type="button" id="resetShapePosition" class="btn-clear">Reset Shape Position</button>
+              </div>
+
               <div class="form-group">
                 <label for="shapeImageEnabled">Fill Shape with Image</label>
                 <input type="checkbox" id="shapeImageEnabled">
@@ -2764,6 +2645,31 @@
                 <label for="shapeImageUpload">Upload Shape Image</label>
                 <input type="file" id="shapeImageUpload" accept="image/*">
                 <button type="button" onclick="removeShapeImage()" class="btn btn-sm">Remove Image</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Custom Icons Section -->
+          <div class="control-section">
+            <div class="section-header" onclick="toggleSection('customIconsSection')">
+              <h3>Custom Icons</h3>
+              <span class="section-toggle" id="customIconsToggle">▼</span>
+            </div>
+            <div class="section-content" id="customIconsSection">
+              <div class="form-group">
+                <label>Search open-source icons, click to drop one on the banner, then drag it into place. Add as many as you like.</label>
+                <div class="unsplash-search">
+                  <input type="text" id="iconLibrarySearch" class="form-control" placeholder="Search icons (e.g., education, business, science)">
+                  <button type="button" id="searchIconLibrary" class="btn btn-primary btn-sm">Search</button>
+                </div>
+                <div id="iconLibraryResults" class="unsplash-grid" style="display: none;"></div>
+              </div>
+
+              <div class="form-group" id="placedIconControls" style="display: none;">
+                <label for="placedIconSize">Selected Icon Size (px)</label>
+                <input type="range" id="placedIconSize" value="60" min="20" max="200" step="5">
+                <span id="placedIconSizeValue">60px</span>
+                <button type="button" id="deletePlacedIcon" class="btn-remove">Delete Selected Icon</button>
               </div>
             </div>
           </div>
@@ -3059,7 +2965,8 @@
         this.bgImageXOffsetValue = document.getElementById('bgImageXOffsetValue');
         this.bgImageYOffsetValue = document.getElementById('bgImageYOffsetValue');
         this.resetBgImagePosition = document.getElementById('resetBgImagePosition');
-        
+        this.resetShapePositionBtn = document.getElementById('resetShapePosition');
+
         // Background image arrow controls
         this.bgImageUp = document.getElementById('bgImageUp');
         this.bgImageDown = document.getElementById('bgImageDown');
@@ -3074,6 +2981,14 @@
         
         // Initialize current icon
         this.currentIcon = 'graduation-cap';
+
+        // Drag offset for the decorative shape, on top of its preset position
+        this.shapeDragOffset = { x: 0, y: 0 };
+
+        // Custom icons placed/dragged onto the banner (Lucide icon library)
+        this.placedIcons = [];
+        this.selectedIconId = null;
+        this.placedIconsLayer = document.getElementById('placedIconsLayer');
       }
 
              bindEvents() {
@@ -3089,7 +3004,10 @@
           this.inputs.logoUpload.addEventListener('change', (e) => this.handleCustomLogoUpload(e));
           
           // Shape controls
-          this.inputs.shapeType.addEventListener('change', () => this.updateShape());
+          this.inputs.shapeType.addEventListener('change', () => {
+            this.shapeDragOffset = { x: 0, y: 0 };
+            this.updateShape();
+          });
           this.inputs.shapeColor.addEventListener('input', () => this.updateShape());
           this.inputs.shapeSize.addEventListener('input', () => this.updateShape());
           this.inputs.shapeOpacity.addEventListener('input', () => this.updateShape());
@@ -3194,7 +3112,10 @@
          if (this.resetBgImagePosition) {
            this.resetBgImagePosition.addEventListener('click', () => this.resetBgImageOffsets());
          }
-         
+         if (this.resetShapePositionBtn) {
+           this.resetShapePositionBtn.addEventListener('click', () => this.resetShapePosition());
+         }
+
          // Background image arrow controls
          if (this.bgImageUp) {
            this.bgImageUp.addEventListener('click', () => this.moveBgImageUp());
@@ -3228,12 +3149,11 @@
          
          // Interactive background image positioning
          this.initializeBackgroundImagePositioning();
-         
+         this.initializeShapeDragging();
+         this.initializePlacedIconEvents();
+
          // Icon controls
          this.initializeIconControls();
-         
-         // Show new features popup on first load
-         this.showNewFeaturesPopupOnLoad();
        }
        
        initializeBackgroundImagePositioning() {
@@ -3267,7 +3187,7 @@
          let dragStartXOffset = 0;
          let dragStartYOffset = 0;
 
-         cropOverlay.style.cursor = 'grab';
+         bgImage.style.cursor = 'grab';
 
          const startDrag = (clientX, clientY) => {
            if (bgImage.style.display === 'none' || !bgImage.src) return;
@@ -3276,14 +3196,19 @@
            dragStartY = clientY;
            dragStartXOffset = this.inputs.bgImageXOffset ? parseInt(this.inputs.bgImageXOffset.value) : 0;
            dragStartYOffset = this.inputs.bgImageYOffset ? parseInt(this.inputs.bgImageYOffset.value) : 0;
-           cropOverlay.style.cursor = 'grabbing';
+           bgImage.style.cursor = 'grabbing';
          };
 
          const moveDrag = (clientX, clientY) => {
            if (!isDraggingImage) return;
-           const rect = cropOverlay.getBoundingClientRect();
-           const deltaXPercent = ((clientX - dragStartX) / rect.width) * 100;
-           const deltaYPercent = ((clientY - dragStartY) / rect.height) * 100;
+           const rect = bgImage.getBoundingClientRect();
+           // Share one divisor between axes so horizontal drag feels as
+           // responsive as vertical - the banner is much wider than it is
+           // tall, so dividing each axis by its own dimension made a given
+           // mouse movement barely nudge X while whipping Y to the edge.
+           const dragScale = Math.min(rect.width, rect.height);
+           const deltaXPercent = ((clientX - dragStartX) / dragScale) * 100;
+           const deltaYPercent = ((clientY - dragStartY) / dragScale) * 100;
 
            const newXOffset = Math.max(-50, Math.min(50, Math.round(dragStartXOffset + deltaXPercent)));
            const newYOffset = Math.max(-50, Math.min(50, Math.round(dragStartYOffset + deltaYPercent)));
@@ -3306,18 +3231,18 @@
          const endDrag = () => {
            if (isDraggingImage) {
              isDraggingImage = false;
-             cropOverlay.style.cursor = 'grab';
+             bgImage.style.cursor = 'grab';
            }
          };
 
-         cropOverlay.addEventListener('mousedown', (e) => {
+         bgImage.addEventListener('mousedown', (e) => {
            startDrag(e.clientX, e.clientY);
            e.preventDefault();
          });
          window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
          window.addEventListener('mouseup', endDrag);
 
-         cropOverlay.addEventListener('touchstart', (e) => {
+         bgImage.addEventListener('touchstart', (e) => {
            const touch = e.touches[0];
            startDrag(touch.clientX, touch.clientY);
          }, { passive: true });
@@ -3331,8 +3256,319 @@
          // Show crop interface when image is loaded
          bgImage.addEventListener('load', showCropInterface);
 
+         // Scroll to zoom in/out for finer framing, same range as the Image
+         // Scale slider (50-200%) so both controls stay in sync.
+         bgImage.addEventListener('wheel', (e) => {
+           if (bgImage.style.display === 'none' || !bgImage.src) return;
+           e.preventDefault();
+           const scaleInput = this.inputs.bgImageScale;
+           if (!scaleInput) return;
+           // Range inputs snap any programmatic .value assignment to their
+           // own step, so the zoom increment has to match it (10) or the
+           // browser silently rounds the value right back to where it was.
+           const step = parseInt(scaleInput.step) || 10;
+           const current = parseInt(scaleInput.value) || 100;
+           const next = e.deltaY < 0 ? current + step : current - step;
+           const min = parseInt(scaleInput.min) || 50;
+           const max = parseInt(scaleInput.max) || 200;
+           scaleInput.value = Math.max(min, Math.min(max, next));
+           this.updateBgImageScale();
+         }, { passive: false });
+
          // Initial setup
          showCropInterface();
+       }
+
+       initializeShapeDragging() {
+         const shapeEl = this.preview.shapeElement;
+         let isDragging = false;
+         let startX = 0;
+         let startY = 0;
+         let startOffsetX = 0;
+         let startOffsetY = 0;
+
+         const startDrag = (clientX, clientY) => {
+           if (shapeEl.style.display === 'none') return;
+           isDragging = true;
+           startX = clientX;
+           startY = clientY;
+           startOffsetX = this.shapeDragOffset.x;
+           startOffsetY = this.shapeDragOffset.y;
+           shapeEl.classList.add('dragging');
+         };
+
+         const moveDrag = (clientX, clientY) => {
+           if (!isDragging) return;
+           // Stored as % of the banner's own size (not raw px) so the offset
+           // still lands in the right spot at export resolutions that differ
+           // from however large the live preview happens to be on screen.
+           const rect = this.preview.banner.getBoundingClientRect();
+           this.shapeDragOffset.x = startOffsetX + ((clientX - startX) / rect.width) * 100;
+           this.shapeDragOffset.y = startOffsetY + ((clientY - startY) / rect.height) * 100;
+           this.updateShape();
+         };
+
+         const endDrag = () => {
+           if (isDragging) {
+             isDragging = false;
+             shapeEl.classList.remove('dragging');
+           }
+         };
+
+         shapeEl.addEventListener('mousedown', (e) => {
+           startDrag(e.clientX, e.clientY);
+           e.preventDefault();
+           e.stopPropagation();
+         });
+         window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+         window.addEventListener('mouseup', endDrag);
+
+         shapeEl.addEventListener('touchstart', (e) => {
+           const touch = e.touches[0];
+           startDrag(touch.clientX, touch.clientY);
+           e.stopPropagation();
+         }, { passive: true });
+         window.addEventListener('touchmove', (e) => {
+           if (!isDragging) return;
+           const touch = e.touches[0];
+           moveDrag(touch.clientX, touch.clientY);
+         }, { passive: true });
+         window.addEventListener('touchend', endDrag);
+       }
+
+       resetShapePosition() {
+         this.shapeDragOffset = { x: 0, y: 0 };
+         this.updateShape();
+       }
+
+       initializePlacedIconEvents() {
+         const searchBtn = document.getElementById('searchIconLibrary');
+         const searchInput = document.getElementById('iconLibrarySearch');
+         if (searchBtn) {
+           searchBtn.addEventListener('click', () => this.searchIconLibrary());
+         }
+         if (searchInput) {
+           searchInput.addEventListener('keypress', (e) => {
+             if (e.key === 'Enter') {
+               e.preventDefault();
+               this.searchIconLibrary();
+             }
+           });
+         }
+
+         const sizeSlider = document.getElementById('placedIconSize');
+         if (sizeSlider) {
+           sizeSlider.addEventListener('input', () => {
+             const icon = this.placedIcons.find(i => i.id === this.selectedIconId);
+             if (!icon) return;
+             icon.sizePx = parseInt(sizeSlider.value);
+             document.getElementById('placedIconSizeValue').textContent = `${icon.sizePx}px`;
+             const el = this.placedIconsLayer.querySelector(`[data-icon-id="${icon.id}"]`);
+             if (el) el.style.width = `${icon.sizePx}px`;
+           });
+         }
+
+         const deleteBtn = document.getElementById('deletePlacedIcon');
+         if (deleteBtn) {
+           deleteBtn.addEventListener('click', () => this.deleteSelectedIcon());
+         }
+
+         // Deselect when clicking anywhere on the banner that isn't an icon
+         this.preview.banner.addEventListener('mousedown', (e) => {
+           if (!e.target.closest('.placed-icon')) {
+             this.selectPlacedIcon(null);
+           }
+         });
+       }
+
+       searchIconLibrary(query) {
+         // Curated keyword -> Lucide (MIT-licensed, unpkg-hosted) icon slugs
+         const iconLibrary = {
+           education: ['graduation-cap', 'book-open', 'book', 'pencil', 'backpack', 'presentation', 'library', 'school', 'ruler', 'calculator'],
+           business: ['briefcase', 'building-2', 'building', 'trending-up', 'bar-chart-3', 'pie-chart', 'handshake', 'coins', 'wallet', 'target'],
+           science: ['flask-conical', 'microscope', 'atom', 'dna', 'test-tube', 'telescope', 'magnet', 'thermometer'],
+           technology: ['laptop', 'monitor', 'cpu', 'code', 'smartphone', 'wifi', 'database', 'server', 'terminal'],
+           arts: ['palette', 'brush', 'pen-tool', 'music', 'film', 'camera', 'image', 'drama'],
+           healthcare: ['heart-pulse', 'stethoscope', 'pill', 'syringe', 'cross', 'bandage', 'activity', 'hospital'],
+           sports: ['trophy', 'dumbbell', 'medal', 'award', 'flag', 'bike'],
+           nature: ['leaf', 'tree-pine', 'sun', 'cloud', 'flower-2', 'mountain', 'droplet', 'sprout'],
+           food: ['coffee', 'pizza', 'utensils', 'apple', 'cake', 'sandwich'],
+           travel: ['plane', 'car', 'ship', 'train', 'map', 'compass', 'globe', 'map-pin'],
+           communication: ['mail', 'phone', 'message-circle', 'bell', 'users', 'user', 'megaphone'],
+           general: ['star', 'heart', 'home', 'calendar', 'clock', 'gift', 'flame', 'gem', 'crown', 'lightbulb', 'rocket', 'puzzle']
+         };
+
+         const q = (query || document.getElementById('iconLibrarySearch')?.value || '').toLowerCase().trim();
+         let slugs = [];
+         if (!q) {
+           slugs = iconLibrary.general;
+         } else {
+           for (const [category, icons] of Object.entries(iconLibrary)) {
+             if (category.includes(q) || q.includes(category)) {
+               slugs.push(...icons);
+             }
+           }
+           if (slugs.length === 0) {
+             slugs = Object.values(iconLibrary).flat().filter(slug => slug.includes(q));
+           }
+           if (slugs.length === 0) {
+             slugs = iconLibrary.general;
+           }
+         }
+         slugs = [...new Set(slugs)].slice(0, 24);
+         this.displayIconLibraryResults(slugs);
+       }
+
+       displayIconLibraryResults(slugs) {
+         const container = document.getElementById('iconLibraryResults');
+         if (!container) return;
+         container.style.display = 'grid';
+         container.innerHTML = '';
+         slugs.forEach(slug => {
+           const url = `https://unpkg.com/lucide-static@latest/icons/${slug}.svg`;
+           const img = document.createElement('img');
+           img.src = url;
+           img.alt = slug;
+           img.title = slug;
+           img.className = 'unsplash-image';
+           img.style.background = '#ffffff';
+           img.style.objectFit = 'contain';
+           img.style.padding = '12px';
+           img.addEventListener('click', () => this.addPlacedIcon(url));
+           container.appendChild(img);
+         });
+       }
+
+       addPlacedIcon(url) {
+         const id = `icon-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+         const count = this.placedIcons.length;
+         // Stagger repeated adds a bit so they don't stack exactly on top
+         // of each other.
+         const icon = {
+           id,
+           url,
+           xPercent: Math.max(10, Math.min(90, 50 + (count % 5) * 8 - 16)),
+           yPercent: Math.max(15, Math.min(85, 50 + (count % 3) * 10 - 10)),
+           sizePx: 60
+         };
+         this.placedIcons.push(icon);
+
+         const el = document.createElement('img');
+         el.src = url;
+         el.className = 'placed-icon';
+         el.dataset.iconId = id;
+         el.style.left = `${icon.xPercent}%`;
+         el.style.top = `${icon.yPercent}%`;
+         el.style.width = `${icon.sizePx}px`;
+
+         const deleteBadge = document.createElement('span');
+         deleteBadge.className = 'placed-icon-delete';
+         deleteBadge.textContent = '×';
+         deleteBadge.addEventListener('mousedown', (e) => e.stopPropagation());
+         deleteBadge.addEventListener('click', (e) => {
+           e.stopPropagation();
+           this.deleteIconById(id);
+         });
+         el.appendChild(deleteBadge);
+
+         this.attachPlacedIconDrag(el, icon);
+         this.placedIconsLayer.appendChild(el);
+
+         this.selectPlacedIcon(id);
+         this.showMessage('✅ Icon added - drag it into place', 'success');
+       }
+
+       attachPlacedIconDrag(el, icon) {
+         const controller = new AbortController();
+         el._dragController = controller;
+         let isDragging = false;
+         let startX = 0;
+         let startY = 0;
+         let startXPercent = 0;
+         let startYPercent = 0;
+
+         const startDrag = (clientX, clientY) => {
+           this.selectPlacedIcon(icon.id);
+           isDragging = true;
+           startX = clientX;
+           startY = clientY;
+           startXPercent = icon.xPercent;
+           startYPercent = icon.yPercent;
+           el.classList.add('dragging');
+         };
+
+         const moveDrag = (clientX, clientY) => {
+           if (!isDragging) return;
+           const rect = this.preview.banner.getBoundingClientRect();
+           icon.xPercent = Math.max(0, Math.min(100, startXPercent + ((clientX - startX) / rect.width) * 100));
+           icon.yPercent = Math.max(0, Math.min(100, startYPercent + ((clientY - startY) / rect.height) * 100));
+           el.style.left = `${icon.xPercent}%`;
+           el.style.top = `${icon.yPercent}%`;
+         };
+
+         const endDrag = () => {
+           if (isDragging) {
+             isDragging = false;
+             el.classList.remove('dragging');
+           }
+         };
+
+         el.addEventListener('mousedown', (e) => {
+           startDrag(e.clientX, e.clientY);
+           e.preventDefault();
+           e.stopPropagation();
+         }, { signal: controller.signal });
+         window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY), { signal: controller.signal });
+         window.addEventListener('mouseup', endDrag, { signal: controller.signal });
+
+         el.addEventListener('touchstart', (e) => {
+           const touch = e.touches[0];
+           startDrag(touch.clientX, touch.clientY);
+           e.stopPropagation();
+         }, { signal: controller.signal, passive: true });
+         window.addEventListener('touchmove', (e) => {
+           if (!isDragging) return;
+           const touch = e.touches[0];
+           moveDrag(touch.clientX, touch.clientY);
+         }, { signal: controller.signal, passive: true });
+         window.addEventListener('touchend', endDrag, { signal: controller.signal });
+       }
+
+       selectPlacedIcon(id) {
+         this.selectedIconId = id;
+         this.placedIconsLayer.querySelectorAll('.placed-icon').forEach(el => {
+           el.classList.toggle('selected', el.dataset.iconId === id);
+         });
+
+         const controls = document.getElementById('placedIconControls');
+         const icon = this.placedIcons.find(i => i.id === id);
+         if (icon && controls) {
+           controls.style.display = 'block';
+           const sizeSlider = document.getElementById('placedIconSize');
+           const sizeValue = document.getElementById('placedIconSizeValue');
+           if (sizeSlider) sizeSlider.value = icon.sizePx;
+           if (sizeValue) sizeValue.textContent = `${icon.sizePx}px`;
+         } else if (controls) {
+           controls.style.display = 'none';
+         }
+       }
+
+       deleteIconById(id) {
+         this.placedIcons = this.placedIcons.filter(i => i.id !== id);
+         const el = this.placedIconsLayer.querySelector(`[data-icon-id="${id}"]`);
+         if (el) {
+           if (el._dragController) el._dragController.abort();
+           el.remove();
+         }
+         if (this.selectedIconId === id) {
+           this.selectPlacedIcon(null);
+         }
+       }
+
+       deleteSelectedIcon() {
+         if (this.selectedIconId) {
+           this.deleteIconById(this.selectedIconId);
+         }
        }
 
        initializeIconControls() {
@@ -3550,20 +3786,6 @@
          const query = categoryQueries[category] || category;
          document.getElementById('iconSearch').value = query;
          this.searchIcons(query);
-       }
-       
-       showNewFeaturesPopupOnLoad() {
-         // Check if this is the first time visiting (using localStorage)
-         const hasSeenPopup = localStorage.getItem('bannerCreatorNewFeaturesSeen');
-         
-         if (!hasSeenPopup) {
-           // Show popup after a short delay to ensure page is loaded
-           setTimeout(() => {
-             showNewFeaturesPopup();
-             // Mark as seen
-             localStorage.setItem('bannerCreatorNewFeaturesSeen', 'true');
-           }, 1000);
-         }
        }
        
 
@@ -4370,9 +4592,37 @@
          
          if (shapeType && shapeType !== '') {
            // Show shape element
+           const wasDragging = this.preview.shapeElement.classList.contains('dragging');
            this.preview.shapeElement.style.display = 'block';
-           this.preview.shapeElement.className = `block-${shapeType.split('-')[1]}`;
+           // shapeType is already the full class name (e.g. "block-wide-left") -
+           // reconstructing it from split('-')[1] used to truncate anything
+           // past the second segment, so most non-basic shapes (wide/corner/
+           // center-* variants) never matched their positioning CSS at all.
+           this.preview.shapeElement.className = `${shapeType}${wasDragging ? ' dragging' : ''}`;
            this.preview.shapeElement.style.opacity = shapeOpacity / 100;
+           const bannerRect = this.preview.banner.getBoundingClientRect();
+           const shapeOffsetXpx = (this.shapeDragOffset.x / 100) * bannerRect.width;
+           const shapeOffsetYpx = (this.shapeDragOffset.y / 100) * bannerRect.height;
+           // Several shape variants center/rotate themselves via the CSS
+           // class's own transform - setting style.transform wholesale would
+           // replace that instead of adding to it, so look up each variant's
+           // base transform and append the drag offset on top of it.
+           const shapeBaseTransforms = {
+             'block-center': 'translate(-50%, -50%)',
+             'block-circle': 'translate(-50%, -50%)',
+             'block-oval': 'translate(-50%, -50%)',
+             'block-triangle': 'translate(-50%, -50%)',
+             'block-hexagon': 'translate(-50%, -50%)',
+             'block-diamond': 'translate(-50%, -50%) rotate(45deg)',
+             'block-diagonal': 'rotate(45deg)',
+             'block-center-left': 'translateY(-50%)',
+             'block-center-right': 'translateY(-50%)',
+             'block-center-top': 'translateX(-50%)',
+             'block-center-bottom': 'translateX(-50%)'
+           };
+           const shapeBaseTransform = shapeBaseTransforms[shapeType] || '';
+           this.preview.shapeElement.style.transform =
+             `${shapeBaseTransform} translate(${shapeOffsetXpx}px, ${shapeOffsetYpx}px)`.trim();
            
            // Handle gradient or solid color
            const useGradient = this.inputs.shapeGradientEnabled && this.inputs.shapeGradientEnabled.checked;
@@ -4434,7 +4684,100 @@
            this.preview.shapeElement.style.display = 'none';
          }
        }
-       
+
+       // Builds a detached shape element for export paths that reconstruct
+       // the banner from scratch (html2canvas-based exports). Reuses the
+       // #shapeElement id/classes so it picks up the same positioning CSS as
+       // the live preview; drag offset is scaled to the export's own pixel
+       // dimensions rather than whatever size the live preview happens to be.
+       buildShapeElement(exportWidth, exportHeight) {
+         const shapeType = this.inputs.shapeType && this.inputs.shapeType.value ? this.inputs.shapeType.value : '';
+         if (!shapeType) return null;
+
+         const shapeColor = this.inputs.shapeColor && this.inputs.shapeColor.value ? this.inputs.shapeColor.value : '#ffffff';
+         const shapeSize = this.inputs.shapeSize && this.inputs.shapeSize.value ? parseInt(this.inputs.shapeSize.value) : 20;
+         const shapeOpacity = this.inputs.shapeOpacity && this.inputs.shapeOpacity.value ? parseInt(this.inputs.shapeOpacity.value) : 100;
+         const shapePosition = this.inputs.shapePosition && this.inputs.shapePosition.value ? this.inputs.shapePosition.value : 'default';
+
+         const el = document.createElement('div');
+         el.id = 'shapeElement';
+         el.className = shapeType;
+         el.style.display = 'block';
+         el.style.opacity = shapeOpacity / 100;
+
+         const shapeBaseTransforms = {
+           'block-center': 'translate(-50%, -50%)',
+           'block-circle': 'translate(-50%, -50%)',
+           'block-oval': 'translate(-50%, -50%)',
+           'block-triangle': 'translate(-50%, -50%)',
+           'block-hexagon': 'translate(-50%, -50%)',
+           'block-diamond': 'translate(-50%, -50%) rotate(45deg)',
+           'block-diagonal': 'rotate(45deg)',
+           'block-center-left': 'translateY(-50%)',
+           'block-center-right': 'translateY(-50%)',
+           'block-center-top': 'translateX(-50%)',
+           'block-center-bottom': 'translateX(-50%)'
+         };
+         const offsetXpx = (this.shapeDragOffset.x / 100) * exportWidth;
+         const offsetYpx = (this.shapeDragOffset.y / 100) * exportHeight;
+         const baseTransform = shapeBaseTransforms[shapeType] || '';
+         el.style.transform = `${baseTransform} translate(${offsetXpx}px, ${offsetYpx}px)`.trim();
+
+         const useGradient = this.inputs.shapeGradientEnabled && this.inputs.shapeGradientEnabled.checked;
+         if (useGradient) {
+           const gradientColor1 = this.inputs.shapeGradientColor1 && this.inputs.shapeGradientColor1.value ? this.inputs.shapeGradientColor1.value : '#ffffff';
+           const gradientColor2 = this.inputs.shapeGradientColor2 && this.inputs.shapeGradientColor2.value ? this.inputs.shapeGradientColor2.value : '#cccccc';
+           const gradientDirection = this.inputs.shapeGradientDirection && this.inputs.shapeGradientDirection.value ? this.inputs.shapeGradientDirection.value : 'to right';
+           el.style.background = `linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2})`;
+           el.style.backgroundColor = 'transparent';
+         } else {
+           el.style.backgroundColor = shapeColor;
+           el.style.background = shapeColor;
+         }
+
+         if (shapeType.includes('left') || shapeType.includes('right')) {
+           el.style.width = `${shapeSize}px`;
+           el.style.height = '100%';
+         } else if (shapeType.includes('top') || shapeType.includes('bottom')) {
+           el.style.width = '100%';
+           el.style.height = `${shapeSize}px`;
+         } else if (shapeType.includes('corner')) {
+           el.style.width = `${shapeSize}px`;
+           el.style.height = `${shapeSize}px`;
+         } else if (shapeType.includes('center')) {
+           el.style.width = `${shapeSize}px`;
+           el.style.height = `${shapeSize}px`;
+         } else if (shapeType.includes('diagonal')) {
+           el.style.width = '100%';
+           el.style.height = '100%';
+         } else if (shapeType.includes('circle')) {
+           el.style.width = `${shapeSize}px`;
+           el.style.height = `${shapeSize}px`;
+         } else if (shapeType.includes('oval')) {
+           el.style.width = `${shapeSize * 2}px`;
+           el.style.height = `${shapeSize}px`;
+         } else if (shapeType.includes('triangle')) {
+           el.style.width = `${shapeSize}px`;
+           el.style.height = `${shapeSize * 1.73}px`;
+         } else if (shapeType.includes('diamond')) {
+           el.style.width = `${shapeSize}px`;
+           el.style.height = `${shapeSize}px`;
+         } else if (shapeType.includes('hexagon')) {
+           el.style.width = `${shapeSize}px`;
+           el.style.height = `${shapeSize}px`;
+         }
+
+         if (shapePosition === 'inset') {
+           el.style.margin = '10px';
+         } else if (shapePosition === 'outset') {
+           el.style.margin = '-10px';
+         } else {
+           el.style.margin = '0';
+         }
+
+         return el;
+       }
+
        toggleShapeGradientControls() {
          const shapeGradientControls = document.getElementById('shapeGradientControls');
          if (this.inputs.shapeGradientEnabled && this.inputs.shapeGradientEnabled.checked) {
@@ -4932,7 +5275,15 @@
             const shapeColor = this.inputs.shapeColor && this.inputs.shapeColor.value ? this.inputs.shapeColor.value : '#ffffff';
             const shapeSize = this.inputs.shapeSize && this.inputs.shapeSize.value ? parseInt(this.inputs.shapeSize.value) : 20;
             const shapeOpacity = this.inputs.shapeOpacity && this.inputs.shapeOpacity.value ? parseInt(this.inputs.shapeOpacity.value) : 100;
-            
+
+            // Apply the same drag offset (stored as % of banner size) used
+            // by the live preview, scaled to this export's pixel dimensions
+            ctx.save();
+            ctx.translate(
+              (this.shapeDragOffset.x / 100) * originalWidth,
+              (this.shapeDragOffset.y / 100) * originalHeight
+            );
+
             ctx.globalAlpha = shapeOpacity / 100;
             
             // Handle shape gradient
@@ -5067,8 +5418,9 @@
             }
             
             ctx.globalAlpha = 1.0; // Reset opacity
+            ctx.restore();
           }
-          
+
           // Draw text
           const title = this.inputs.title && this.inputs.title.value ? this.inputs.title.value : '';
           const subtitle2 = this.inputs.subtitle2 && this.inputs.subtitle2.value ? this.inputs.subtitle2.value : '';
@@ -5175,7 +5527,31 @@
           });
         }
         
-        drawLogoAndDownload(ctx, canvas, originalWidth, originalHeight) {
+        async drawPlacedIconsOnCanvas(ctx, originalWidth, originalHeight) {
+          for (const icon of this.placedIcons) {
+            try {
+              const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.crossOrigin = 'anonymous';
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = icon.url;
+              });
+              const size = icon.sizePx;
+              const x = (icon.xPercent / 100) * originalWidth - size / 2;
+              const y = (icon.yPercent / 100) * originalHeight - size / 2;
+              ctx.drawImage(img, x, y, size, size);
+            } catch (error) {
+              console.error('Error drawing placed icon:', error);
+            }
+          }
+        }
+
+        async drawLogoAndDownload(ctx, canvas, originalWidth, originalHeight) {
+          // Draw any custom icons the user dropped onto the banner first, so
+          // the logo/download step below still has the final word visually.
+          await this.drawPlacedIconsOnCanvas(ctx, originalWidth, originalHeight);
+
           // Check for logo type
           const logoType = this.inputs.logoType ? this.inputs.logoType.value : 'upload';
           const hasLogo = this.preview.logoImage && this.preview.logoImage.style.display !== 'none' && this.preview.logoImage.src;
@@ -6139,7 +6515,13 @@
         
         // Add text container to banner
         banner.appendChild(textContainer);
-        
+
+        // Add decorative shape if present
+        const shapeEl = this.buildShapeElement(exportDims.width, exportDims.height);
+        if (shapeEl) {
+          banner.appendChild(shapeEl);
+        }
+
         // Add logo if present
         if (this.preview.logoImage && this.preview.logoImage.style.display !== 'none' && this.preview.logoImage.src) {
           const logo = document.createElement('img');
@@ -6158,7 +6540,22 @@
           `;
           banner.appendChild(logo);
         }
-        
+
+        // Add any custom icons the user has placed and dragged onto the banner
+        this.placedIcons.forEach(icon => {
+          const iconEl = document.createElement('img');
+          iconEl.src = icon.url;
+          iconEl.style.cssText = `
+            position: absolute;
+            left: ${icon.xPercent}%;
+            top: ${icon.yPercent}%;
+            width: ${icon.sizePx}px;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+          `;
+          banner.appendChild(iconEl);
+        });
+
         return banner;
         } catch (error) {
           console.error('Error creating export banner:', error);
@@ -6299,20 +6696,6 @@
        }
      }
 
-     function closeNewFeaturesPopup() {
-       const popup = document.getElementById('newFeaturesPopup');
-       if (popup) {
-         popup.style.display = 'none';
-       }
-     }
-
-     function showNewFeaturesPopup() {
-       const popup = document.getElementById('newFeaturesPopup');
-       if (popup) {
-         popup.style.display = 'flex';
-       }
-     }
-
      function copyToClipboard() {
        bannerCreator.copyToClipboard();
      }
@@ -6336,6 +6719,7 @@
        const collapsedByDefault = [
          'imagesSection',
          'shapeSection',
+         'customIconsSection',
          'exportOptionsSection'
        ];
 
