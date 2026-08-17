@@ -26,7 +26,6 @@
         console.error('Fabric.js failed to load!');
         alert('Fabric.js library failed to load. Please refresh the page.');
       } else {
-        console.log('Fabric.js loaded successfully:', fabric.version);
       }
       
       
@@ -1072,6 +1071,21 @@
          margin: 0 auto;
          border: 1px solid rgba(255, 255, 255, 0.1);
          z-index: 10001;
+       }
+
+       #emptyStateHint {
+         position: absolute;
+         inset: 0;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         text-align: center;
+         padding: 0 var(--spacing-md);
+         color: rgba(255, 255, 255, 0.65);
+         font-style: italic;
+         font-size: 0.95rem;
+         pointer-events: none;
+         z-index: 1;
        }
 
     #bgImage {
@@ -2143,7 +2157,7 @@
          <!-- Header -->
      <div class="header">
                <h1>Canvas Banner Creator</h1>
-        <div class="version-info">Built on August 12, 2025 - Version 4.0 - Bootstrap Enhanced</div>
+        <div class="version-info" id="versionInfo"></div>
      </div>
      
      <!-- New Features Popup -->
@@ -2205,6 +2219,7 @@
         <h2>Live Preview</h2>
         <div class="preview-wrapper">
                  <div id="bannerPreview">
+           <div id="emptyStateHint">Pick a template or start typing to see your banner</div>
            <img id="bgImage" alt="Background" style="display: none;" />
            <div id="shapeElement" style="display: none;"></div>
            <div id="bannerTextContainer">
@@ -2369,6 +2384,74 @@
              </div>
            </div>
 
+          <!-- Colors Section -->
+          <div class="control-section">
+            <div class="section-header" onclick="toggleSection('colorsSection')">
+              <h3>Colors</h3>
+              <span class="section-toggle" id="colorsToggle">▼</span>
+            </div>
+            <div class="section-content" id="colorsSection">
+                         <div class="form-group">
+               <label for="sinclairColor">Sinclair Brand Colors</label>
+               <select id="sinclairColor">
+                 <option value="">Custom Color</option>
+                 <option value="--sinclair-red">Sinclair Red</option>
+                 <option value="--sinclair-charcoal">Sinclair Charcoal</option>
+                 <option value="--sinclair-black">Sinclair Black</option>
+                 <option value="--sinclair-royal-blue">Royal Blue</option>
+                 <option value="--sinclair-green">Sinclair Green</option>
+                 <option value="--sinclair-aqua">Sinclair Aqua</option>
+                 <option value="--sinclair-purple">Sinclair Purple</option>
+                 <option value="--sinclair-mint">Sinclair Mint</option>
+                 <option value="transparent">No Color</option>
+               </select>
+             </div>
+
+             <div class="form-group">
+                                 <button class="btn-primary" onclick="clearBackgroundColor()">Clear Background Color</button>
+             </div>
+
+            <div class="form-group">
+              <label for="customBgColor">Custom Background Color</label>
+              <input type="color" id="customBgColor" value="#0b325c">
+            </div>
+
+            <div class="form-group">
+              <label for="gradientBgEnabled">Gradient Background</label>
+              <select id="gradientBgEnabled">
+                <option value="false">Single Color</option>
+                <option value="true">Gradient</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="gradientControls" style="display: none;">
+              <label for="gradientColor1">Gradient Color 1</label>
+              <input type="color" id="gradientColor1" value="#AC1A2F">
+            </div>
+
+            <div class="form-group" id="gradientControls2" style="display: none;">
+              <label for="gradientColor2">Gradient Color 2</label>
+              <input type="color" id="gradientColor2" value="#8b0000">
+            </div>
+
+            <div class="form-group" id="gradientControls3" style="display: none;">
+              <label for="gradientColor3">Gradient Color 3</label>
+              <input type="color" id="gradientColor3" value="#660000">
+            </div>
+
+            <div class="form-group" id="gradientControls4" style="display: none;">
+              <label for="gradientDirection">Gradient Direction</label>
+              <select id="gradientDirection">
+                <option value="135deg">Diagonal (135°)</option>
+                <option value="90deg">Vertical</option>
+                <option value="0deg">Horizontal</option>
+                <option value="45deg">Diagonal (45°)</option>
+                <option value="180deg">Diagonal (180°)</option>
+              </select>
+            </div>
+            </div>
+          </div>
+
                                 <!-- Typography Section -->
             <div class="control-section typography-section">
              <div class="section-header" onclick="toggleSection('typographySection')">
@@ -2417,104 +2500,6 @@
              </div>
              </div>
            </div>
-
-                     <!-- Banner Dimensions Section -->
-           <div class="control-section banner-dimensions-section">
-            <div class="section-header" onclick="toggleSection('dimensionsSection')">
-              <h3>Banner Dimensions</h3>
-              <span class="section-toggle" id="dimensionsToggle">▼</span>
-            </div>
-            <div class="section-content" id="dimensionsSection">
-            <div class="form-group">
-              <label for="bannerWidth">Width (px)</label>
-              <input type="number" id="bannerWidth" class="form-control" value="1200" min="400" max="2000">
-            </div>
-            
-            <div class="form-group">
-              <label for="bannerHeight">Height (px)</label>
-              <input type="number" id="bannerHeight" class="form-control" value="200" min="80" max="400">
-            </div>
-
-            <div class="form-group">
-              <label for="previewScale">Preview Scale (%)</label>
-              <input type="range" id="previewScale" value="100" min="25" max="100" step="25">
-              <span id="scaleValue">100%</span>
-            </div>
-            
-            <div class="dimension-buttons row g-2 justify-content-center">
-              <div class="col-5"><button class="btn btn-outline-primary w-100" onclick="setCanvasCourseCard()" data-bs-toggle="tooltip" data-bs-title="Set dimensions for Canvas course card (262x147px)">Course Card</button></div>
-              <div class="col-5"><button class="btn btn-outline-primary w-100" onclick="setCanvasBanner()" data-bs-toggle="tooltip" data-bs-title="Set dimensions for Canvas banner (1200x200px)">Canvas Banner</button></div>
-            </div>
-            </div>
-          </div>
-
-          <!-- Colors Section -->
-          <div class="control-section">
-            <div class="section-header" onclick="toggleSection('colorsSection')">
-              <h3>Colors</h3>
-              <span class="section-toggle" id="colorsToggle">▼</span>
-            </div>
-            <div class="section-content" id="colorsSection">
-                         <div class="form-group">
-               <label for="sinclairColor">Sinclair Brand Colors</label>
-               <select id="sinclairColor">
-                 <option value="">Custom Color</option>
-                 <option value="--sinclair-red">Sinclair Red</option>
-                 <option value="--sinclair-charcoal">Sinclair Charcoal</option>
-                 <option value="--sinclair-black">Sinclair Black</option>
-                 <option value="--sinclair-royal-blue">Royal Blue</option>
-                 <option value="--sinclair-green">Sinclair Green</option>
-                 <option value="--sinclair-aqua">Sinclair Aqua</option>
-                 <option value="--sinclair-purple">Sinclair Purple</option>
-                 <option value="--sinclair-mint">Sinclair Mint</option>
-                 <option value="transparent">No Color</option>
-               </select>
-             </div>
-             
-             <div class="form-group">
-                                 <button class="btn-primary" onclick="clearBackgroundColor()">Clear Background Color</button>
-             </div>
-            
-            <div class="form-group">
-              <label for="customBgColor">Custom Background Color</label>
-              <input type="color" id="customBgColor" value="#ffffff">
-            </div>
-            
-            <div class="form-group">
-              <label for="gradientBgEnabled">Gradient Background</label>
-              <select id="gradientBgEnabled">
-                <option value="false">Single Color</option>
-                <option value="true">Gradient</option>
-              </select>
-            </div>
-            
-            <div class="form-group" id="gradientControls" style="display: none;">
-              <label for="gradientColor1">Gradient Color 1</label>
-              <input type="color" id="gradientColor1" value="#AC1A2F">
-            </div>
-            
-            <div class="form-group" id="gradientControls2" style="display: none;">
-              <label for="gradientColor2">Gradient Color 2</label>
-              <input type="color" id="gradientColor2" value="#8b0000">
-            </div>
-            
-            <div class="form-group" id="gradientControls3" style="display: none;">
-              <label for="gradientColor3">Gradient Color 3</label>
-              <input type="color" id="gradientColor3" value="#660000">
-            </div>
-            
-            <div class="form-group" id="gradientControls4" style="display: none;">
-              <label for="gradientDirection">Gradient Direction</label>
-              <select id="gradientDirection">
-                <option value="135deg">Diagonal (135°)</option>
-                <option value="90deg">Vertical</option>
-                <option value="0deg">Horizontal</option>
-                <option value="45deg">Diagonal (45°)</option>
-                <option value="180deg">Diagonal (180°)</option>
-              </select>
-            </div>
-            </div>
-          </div>
 
           <!-- Images Section -->
           <div class="control-section">
@@ -2784,6 +2769,36 @@
             </div>
           </div>
 
+          <!-- Banner Dimensions Section -->
+          <div class="control-section banner-dimensions-section">
+            <div class="section-header" onclick="toggleSection('dimensionsSection')">
+              <h3>Banner Dimensions</h3>
+              <span class="section-toggle" id="dimensionsToggle">▼</span>
+            </div>
+            <div class="section-content" id="dimensionsSection">
+            <div class="form-group">
+              <label for="bannerWidth">Width (px)</label>
+              <input type="number" id="bannerWidth" class="form-control" value="1200" min="400" max="2000">
+            </div>
+
+            <div class="form-group">
+              <label for="bannerHeight">Height (px)</label>
+              <input type="number" id="bannerHeight" class="form-control" value="200" min="80" max="400">
+            </div>
+
+            <div class="form-group">
+              <label for="previewScale">Preview Scale (%)</label>
+              <input type="range" id="previewScale" value="100" min="25" max="100" step="25">
+              <span id="scaleValue">100%</span>
+            </div>
+
+            <div class="dimension-buttons row g-2 justify-content-center">
+              <div class="col-5"><button class="btn btn-outline-primary w-100" onclick="setCanvasCourseCard()" data-bs-toggle="tooltip" data-bs-title="Set dimensions for Canvas course card (262x147px)">Course Card</button></div>
+              <div class="col-5"><button class="btn btn-outline-primary w-100" onclick="setCanvasBanner()" data-bs-toggle="tooltip" data-bs-title="Set dimensions for Canvas banner (1200x200px)">Canvas Banner</button></div>
+            </div>
+            </div>
+          </div>
+
           <!-- Fabric.js Image Editing Section (Hidden) -->
           <div class="control-section" style="display: none;">
             <div class="section-header" onclick="toggleSection('fabricSection')">
@@ -2956,6 +2971,10 @@
   </div>
 
   <script>
+    // Bump this whenever a dated change ships - shown in the header.
+    const BUILD_DATE = 'August 16, 2026';
+    const BUILD_VERSION = '4.1';
+
     // Banner Creator Class
     class BannerCreator {
       constructor() {
@@ -3101,32 +3120,25 @@
 
          // Sinclair color dropdown
          this.inputs.sinclairColor.addEventListener('change', () => {
-           console.log('Sinclair color changed to:', this.inputs.sinclairColor.value);
            // If a Sinclair color is selected, clear the custom color picker
            if (this.inputs.sinclairColor.value !== '') {
              this.inputs.customBgColor.value = '#ffffff';
            }
-           console.log('Calling updateBanner from Sinclair color change');
            this.updateBanner();
          });
          
          // Also add a click listener as backup
          this.inputs.sinclairColor.addEventListener('click', () => {
-           console.log('Sinclair color clicked');
          });
          
          // Add a test to check if the dropdown is working
          setTimeout(() => {
-           console.log('Sinclair dropdown options:', this.inputs.sinclairColor.options.length);
-           console.log('Sinclair dropdown current value:', this.inputs.sinclairColor.value);
          }, 1000);
 
          // Custom color picker
          this.inputs.customBgColor.addEventListener('input', () => {
-           console.log('Custom color changed to:', this.inputs.customBgColor.value);
            // If custom color is used, set Sinclair dropdown to "Custom Color"
            this.inputs.sinclairColor.value = '';
-           console.log('Calling updateBanner from custom color change');
            this.updateBanner();
          });
 
@@ -3337,8 +3349,6 @@
          }
          
          // Load initial icons
-         console.log('Initializing icon search...');
-         console.log('Icon search element found:', !!iconSearch);
          this.searchIcons();
        }
 
@@ -3347,10 +3357,8 @@
            const searchQuery = query || document.getElementById('iconSearch')?.value || 'graduation';
            const resultsContainer = document.getElementById('iconResults');
            
-           console.log('Searching for emoji icons with query:', searchQuery);
            
            if (!resultsContainer) {
-             console.log('No results container found');
              return;
            }
            
@@ -3433,7 +3441,6 @@
          const resultsContainer = document.getElementById('iconResults');
          if (!resultsContainer) return;
          
-         console.log('Displaying emoji icons:', icons);
          
          resultsContainer.innerHTML = '';
          
@@ -3450,15 +3457,12 @@
            resultsContainer.appendChild(iconElement);
            
            // Debug: Check if the icon element was created
-           console.log(`Created emoji element for: ${emoji}`);
          });
          
          // Debug: Check if any icons were added
-         console.log('Total emojis added:', resultsContainer.children.length);
        }
 
        selectIcon(iconName) {
-         console.log('selectIcon called with:', iconName);
          // Update the selected icon
          this.currentIcon = iconName;
          
@@ -3475,14 +3479,11 @@
          }
          
          // Force update the banner to show the new icon
-         console.log('selectIcon: About to call updateBanner with currentIcon:', this.currentIcon);
          setTimeout(() => {
-           console.log('selectIcon: Delayed updateBanner call with currentIcon:', this.currentIcon);
            this.updateBanner();
          }, 100);
          
          // Update the banner immediately
-         console.log('selectIcon: Immediate updateBanner call with currentIcon:', this.currentIcon);
          this.updateBanner();
          
          // Highlight selected icon in results
@@ -4027,15 +4028,13 @@
          const logoSize = isAnyAutoWidth ? baseLogoSize : Math.round(baseLogoSize * scaleFactor);
          
          const font = this.inputs.fontChoice && this.inputs.fontChoice.value ? this.inputs.fontChoice.value : 'Montserrat, Arial, sans-serif';
-         const titleColor = this.inputs.titleColor && this.inputs.titleColor.value ? this.inputs.titleColor.value : '#ffffff';
-         const subtitleColor = this.inputs.subtitleColor && this.inputs.subtitleColor.value ? this.inputs.subtitleColor.value : '#ffffff';
-         const subtitle3Color = this.inputs.subtitle3Color && this.inputs.subtitle3Color.value ? this.inputs.subtitle3Color.value : '#ffffff';
+         const { titleColor, subtitleColor, subtitle3Color } = this.getResolvedTextColors();
          const textAlign = this.inputs.textAlign && this.inputs.textAlign.value ? this.inputs.textAlign.value : 'left';
          const bgColor = this.getBackgroundColor();
          const hasLogo = this.preview.logoImage && this.preview.logoImage.style.display !== 'none' && this.preview.logoImage.src;
          const logoType = this.inputs.logoType ? this.inputs.logoType.value : 'upload';
          const hasIcon = logoType === 'icon';
-         
+
          return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4296,7 +4295,6 @@
        }
 
        removeLogo() {
-         console.log('removeLogo called');
          
          // Clear logo image completely
          this.preview.logoImage.src = '';
@@ -4450,7 +4448,11 @@
            const title = this.inputs.title && this.inputs.title.value ? this.inputs.title.value : '';
            const subtitle2 = this.inputs.subtitle2 && this.inputs.subtitle2.value ? this.inputs.subtitle2.value : '';
            const subtitle3 = this.inputs.subtitle3 && this.inputs.subtitle3.value ? this.inputs.subtitle3.value : '';
-           
+
+           const emptyStateHint = document.getElementById('emptyStateHint');
+           if (emptyStateHint) {
+             emptyStateHint.style.display = title.trim() ? 'none' : 'flex';
+           }
 
            const titleSize = this.inputs.titleSize && this.inputs.titleSize.value ? this.inputs.titleSize.value : 48;
            const subtitleSize = this.inputs.subtitleSize && this.inputs.subtitleSize.value ? this.inputs.subtitleSize.value : 24;
@@ -4459,11 +4461,7 @@
            const previewScale = this.inputs.previewScale && this.inputs.previewScale.value ? this.inputs.previewScale.value : 100;
            const font = this.inputs.fontChoice && this.inputs.fontChoice.value ? this.inputs.fontChoice.value : 'Montserrat, Arial, sans-serif';
            const textAlign = this.inputs.textAlign && this.inputs.textAlign.value ? this.inputs.textAlign.value : 'left';
-           const titleColor = this.inputs.titleColor && this.inputs.titleColor.value ? this.inputs.titleColor.value : '#ffffff';
-           const subtitleColor = this.inputs.subtitleColor && this.inputs.subtitleColor.value ? this.inputs.subtitleColor.value : '#ffffff';
-           const subtitle3Color = this.inputs.subtitle3Color && this.inputs.subtitle3Color.value ? this.inputs.subtitle3Color.value : '#ffffff';
-           const sinclairColor = this.inputs.sinclairColor && this.inputs.sinclairColor.value ? this.inputs.sinclairColor.value : '';
-           const customColor = this.inputs.customBgColor && this.inputs.customBgColor.value ? this.inputs.customBgColor.value : '#ffffff';
+           const { titleColor, subtitleColor, subtitle3Color } = this.getResolvedTextColors();
 
                      // Get background color (handles gradients)
           const bgColor = this.getBackgroundColor();
@@ -4484,15 +4482,12 @@
           this.updateLogoSize();
 
           // Update banner background (handles both solid colors and gradients)
-          console.log('Applying background color:', bgColor);
           if (bgColor.includes('linear-gradient')) {
             this.preview.banner.style.background = bgColor;
             this.preview.banner.style.backgroundColor = 'transparent';
-            console.log('Applied gradient background');
           } else {
             this.preview.banner.style.backgroundColor = bgColor.trim();
             this.preview.banner.style.background = 'none';
-            console.log('Applied solid background color:', bgColor.trim());
           }
           
           // Force the background to be visible
@@ -4502,8 +4497,6 @@
           }
           
           // Add a visual indicator of the current background color
-          console.log('Current banner background:', this.preview.banner.style.backgroundColor);
-          console.log('Current banner background (computed):', getComputedStyle(this.preview.banner).backgroundColor);
           
           // Update background image styling if image exists
           if (this.preview.bgImage.style.display !== 'none' && this.preview.bgImage.src) {
@@ -4607,8 +4600,6 @@
           const logoType = this.inputs.logoType ? this.inputs.logoType.value : 'upload';
           const hasLogoImage = this.preview.logoImage && this.preview.logoImage.style.display !== 'none' && this.preview.logoImage.src;
           
-          console.log('updateBanner: logoType =', logoType);
-          console.log('updateBanner: hasLogoImage =', hasLogoImage);
           
           if (logoType === 'icon') {
             // Show icon, hide logo image
@@ -4618,26 +4609,18 @@
             const iconName = this.currentIcon || 'graduation-cap';
             const iconColor = this.inputs.iconColor ? this.inputs.iconColor.value : '#ffffff';
             
-            console.log('updateBanner: currentIcon =', this.currentIcon);
-            console.log('updateBanner: iconName =', iconName);
 
             
             // Use emoji directly
             const selectedIcon = this.currentIcon || '🎓';
-            console.log('updateBanner: currentIcon =', this.currentIcon);
-            console.log('updateBanner: selectedIcon =', selectedIcon);
             
             let iconHTML = `<span style="font-size: inherit; display: inline-block; text-align: center;">${selectedIcon}</span>`;
-            console.log('updateBanner: Using emoji:', selectedIcon);
             
-            console.log('updateBanner: Setting logoIcon.innerHTML to:', iconHTML);
             this.preview.logoIcon.innerHTML = iconHTML;
 
             this.preview.logoIcon.className = 'logo-icon';
             
             // Debug: Check what was actually set
-            console.log('updateBanner: logoIcon.innerHTML after setting:', this.preview.logoIcon.innerHTML);
-            console.log('updateBanner: logoIcon.style.color:', this.preview.logoIcon.style.color);
             
             // Center the icon vertically
             this.preview.logoIcon.style.display = 'flex';
@@ -4664,11 +4647,9 @@
 
                      async downloadBanner() {
           try {
-            console.log('Starting downloadBanner...');
             this.showLoadingState(true);
             
                         // Use Canvas API for everything (perfect colors and positioning)
-            console.log('Using Canvas API for all exports');
             
             const exportDims = this.getExportDimensions();
             const originalWidth = exportDims.width;
@@ -4690,7 +4671,6 @@
             ctx.scale(scale, scale);
             
             // Draw background (solid color, gradient, or image)
-            console.log('Checking background type...');
             const hasBgImage = this.preview.bgImage && this.preview.bgImage.style.display !== 'none' && this.preview.bgImage.src;
             
             if (hasBgImage) {
@@ -4704,7 +4684,6 @@
                 const objectFit = bgImageStyle.objectFit || 'cover';
                 const objectPosition = bgImageStyle.objectPosition || 'center';
                 
-                console.log('Background image properties:', { objectFit, objectPosition });
                 
                 // Calculate how to draw the image based on object-fit and object-position
                 let drawWidth, drawHeight, drawX, drawY;
@@ -4810,26 +4789,20 @@
               // Handle solid color or gradient background
               const bgColor = this.getBackgroundColor();
               
-              console.log('Background color:', bgColor);
               if (bgColor.includes('linear-gradient')) {
-                console.log('Gradient detected, parsing:', bgColor);
                 
                 // Parse gradient string like "linear-gradient(135deg, #AC1A2F 0%, #8b0000 50%, #660000 100%)"
                 const match = bgColor.match(/linear-gradient\(([^)]+)\)/);
                 if (match) {
                   const content = match[1];
-                  console.log('Gradient content:', content);
                   
                   // Split by comma to get direction and color stops
                   const parts = content.split(',').map(part => part.trim());
-                  console.log('Parts:', parts);
                   
                   if (parts.length >= 3) {
                     const direction = parts[0];
                     const colorStops = parts.slice(1);
                     
-                    console.log('Direction:', direction);
-                    console.log('Color stops:', colorStops);
                     
                     // Parse colors and positions
                     const colors = [];
@@ -4854,8 +4827,6 @@
                       }
                     });
                     
-                    console.log('Parsed colors:', colors);
-                    console.log('Parsed positions:', positions);
                     
                     if (colors.length >= 2) {
                       // Create gradient
@@ -4882,17 +4853,14 @@
                       ctx.fillStyle = gradient;
                       ctx.fillRect(0, 0, canvas.width, canvas.height);
                     } else {
-                      console.log('Not enough colors, using fallback');
                       ctx.fillStyle = '#AC1A2F';
                       ctx.fillRect(0, 0, canvas.width, canvas.height);
                     }
                   } else {
-                    console.log('Not enough parts, using fallback');
                     ctx.fillStyle = '#AC1A2F';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                   }
                 } else {
-                  console.log('No gradient match, using fallback');
                   ctx.fillStyle = '#AC1A2F';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
@@ -4914,7 +4882,6 @@
         }
         
         drawGradientBackground(ctx, canvas, gradientString, exportDims) {
-          console.log('Gradient function called with:', gradientString);
           
           // Simple fallback - just draw a solid color for now
           ctx.fillStyle = '#AC1A2F';
@@ -4938,13 +4905,10 @@
             let gradientColor1, gradientColor2, gradientDirection;
             
             if (useShapeGradient) {
-              console.log('Shape gradient enabled');
               gradientColor1 = this.inputs.shapeGradientColor1 && this.inputs.shapeGradientColor1.value ? this.inputs.shapeGradientColor1.value : '#ffffff';
               gradientColor2 = this.inputs.shapeGradientColor2 && this.inputs.shapeGradientColor2.value ? this.inputs.shapeGradientColor2.value : '#cccccc';
               gradientDirection = this.inputs.shapeGradientDirection && this.inputs.shapeGradientDirection.value ? this.inputs.shapeGradientDirection.value : 'to right';
               
-              console.log('Shape gradient colors:', gradientColor1, gradientColor2);
-              console.log('Shape gradient direction:', gradientDirection);
             } else {
               ctx.fillStyle = shapeColor;
             }
@@ -5140,33 +5104,36 @@
             verticalOffset = 20; // Smaller offset for course card
           }
           
+          const { titleColor, subtitleColor, subtitle3Color } = this.getResolvedTextColors();
+
           // Draw title
           ctx.font = `bold ${titleSize}px ${font}`;
-          ctx.fillStyle = this.inputs.titleColor && this.inputs.titleColor.value ? this.inputs.titleColor.value : '#ffffff';
-          
+          ctx.fillStyle = titleColor;
+
           let yOffset = startY + verticalOffset;
           titleLines.forEach(line => {
             ctx.fillText(line, xPos, yOffset);
             yOffset += titleSize + 5;
           });
-          
+
           // Draw subtitle2 (reduced spacing for PNG)
           ctx.font = `${subtitleSize}px ${font}`;
-          ctx.fillStyle = this.inputs.subtitleColor && this.inputs.subtitleColor.value ? this.inputs.subtitleColor.value : '#ffffff';
-          
+          ctx.fillStyle = subtitleColor;
+
           // Move subtitle up by 15px (adjust for course card)
           if (originalWidth === 262 && originalHeight === 147) {
             yOffset -= 8; // Smaller adjustment for course card
           } else {
             yOffset -= 15; // Normal adjustment for other sizes
           }
-          
+
           subtitle2Lines.forEach(line => {
             ctx.fillText(line, xPos, yOffset);
             yOffset += subtitleSize + 3; // Reduced spacing for PNG
           });
-          
+
           // Draw subtitle3 (reduced spacing for PNG)
+          ctx.fillStyle = subtitle3Color;
           subtitle3Lines.forEach(line => {
             ctx.fillText(line, xPos, yOffset);
             yOffset += subtitleSize + 3; // Reduced spacing for PNG
@@ -5242,7 +5209,6 @@
             logoImg.src = this.preview.logoImage.src;
           } else if (hasIcon) {
             // Handle icon download using Lucide icons
-            console.log('Downloading with icon:', this.currentIcon);
             
             const iconName = this.currentIcon || 'graduation-cap';
             const iconColor = this.inputs.iconColor ? this.inputs.iconColor.value : '#ffffff';
@@ -5490,9 +5456,7 @@
            const titleSize = this.inputs.titleSize && this.inputs.titleSize.value ? parseInt(this.inputs.titleSize.value) : 48;
            const subtitleSize = this.inputs.subtitleSize && this.inputs.subtitleSize.value ? parseInt(this.inputs.subtitleSize.value) : 24;
            const font = this.inputs.fontChoice && this.inputs.fontChoice.value ? this.inputs.fontChoice.value : 'Montserrat, Arial, sans-serif';
-           const titleColor = this.inputs.titleColor && this.inputs.titleColor.value ? this.inputs.titleColor.value : '#ffffff';
-           const subtitleColor = this.inputs.subtitleColor && this.inputs.subtitleColor.value ? this.inputs.subtitleColor.value : '#ffffff';
-           const subtitle3Color = this.inputs.subtitle3Color && this.inputs.subtitle3Color.value ? this.inputs.subtitle3Color.value : '#ffffff';
+           const { titleColor, subtitleColor, subtitle3Color } = this.getResolvedTextColors();
            const textAlign = this.inputs.textAlign && this.inputs.textAlign.value ? this.inputs.textAlign.value : 'left';
            const logoSize = this.inputs.logoSize && this.inputs.logoSize.value ? parseInt(this.inputs.logoSize.value) : 120;
            
@@ -5864,17 +5828,8 @@
         const subtitleSize = this.inputs.subtitleSize.value;
         const font = this.inputs.fontChoice.value;
         const textAlign = this.inputs.textAlign.value;
-        const titleColor = this.inputs.titleColor.value;
-        const subtitleColor = this.inputs.subtitleColor.value;
-        const subtitle3Color = this.inputs.subtitle3Color.value;
-        const sinclairColor = this.inputs.sinclairColor.value;
-        const customColor = this.inputs.customBgColor.value;
+        const { titleColor, subtitleColor, subtitle3Color } = this.getResolvedTextColors();
         const logoSize = this.inputs.logoSize ? this.inputs.logoSize.value : 120;
-        
-        console.log('Applying export styling with:', {
-          title, subtitle2, subtitle3, titleSize, subtitleSize, font, textAlign,
-          titleColor, subtitleColor, subtitle3Color, logoSize
-        });
         
         // Set banner dimensions
         tempBanner.style.width = `${exportDims.width}px`;
@@ -5900,51 +5855,41 @@
         const tempTextContainer = tempBanner.querySelector('#bannerTextContainer');
         const tempLogo = tempBanner.querySelector('#logoImage');
         
-        console.log('Found elements:', {
-          tempTitle: !!tempTitle,
-          tempSubtitle2: !!tempSubtitle2,
-          tempSubtitle3: !!tempSubtitle3,
-          tempTextContainer: !!tempTextContainer,
-          tempLogo: !!tempLogo
-        });
         
         if (tempTitle) {
           tempTitle.innerText = title;
           tempTitle.style.setProperty('font-size', `${titleSize}px`, 'important');
           tempTitle.style.setProperty('font-family', font, 'important');
-          tempTitle.style.setProperty('color', titleColor === '#ffffff' ? '#ffffff' : titleColor, 'important');
+          tempTitle.style.setProperty('color', titleColor, 'important');
           tempTitle.style.setProperty('opacity', '1', 'important');
           tempTitle.style.setProperty('text-shadow', '0 1px 2px rgba(0, 0, 0, 0.3)', 'important');
           tempTitle.style.setProperty('font-weight', '700', 'important');
           tempTitle.style.setProperty('line-height', '1.2', 'important');
           tempTitle.style.setProperty('margin', '0', 'important');
-          console.log('Applied title styling:', tempTitle.style.color);
         }
         
         if (tempSubtitle2) {
           tempSubtitle2.innerText = subtitle2;
           tempSubtitle2.style.setProperty('font-size', `${subtitleSize}px`, 'important');
           tempSubtitle2.style.setProperty('font-family', font, 'important');
-          tempSubtitle2.style.setProperty('color', subtitleColor === '#ffffff' ? '#ffffff' : subtitleColor, 'important');
+          tempSubtitle2.style.setProperty('color', subtitleColor, 'important');
           tempSubtitle2.style.setProperty('opacity', '1', 'important');
           tempSubtitle2.style.setProperty('text-shadow', '0 1px 2px rgba(0, 0, 0, 0.3)', 'important');
           tempSubtitle2.style.setProperty('font-weight', '300', 'important');
           tempSubtitle2.style.setProperty('line-height', '1.2', 'important');
           tempSubtitle2.style.setProperty('margin', '0', 'important');
-          console.log('Applied subtitle2 styling:', tempSubtitle2.style.color);
         }
         
         if (tempSubtitle3) {
           tempSubtitle3.innerText = subtitle3;
           tempSubtitle3.style.setProperty('font-size', `${subtitleSize}px`, 'important');
           tempSubtitle3.style.setProperty('font-family', font, 'important');
-          tempSubtitle3.style.setProperty('color', subtitle3Color === '#ffffff' ? '#ffffff' : subtitle3Color, 'important');
+          tempSubtitle3.style.setProperty('color', subtitle3Color, 'important');
           tempSubtitle3.style.setProperty('opacity', '1', 'important');
           tempSubtitle3.style.setProperty('text-shadow', '0 1px 2px rgba(0, 0, 0, 0.3)', 'important');
           tempSubtitle3.style.setProperty('font-weight', '300', 'important');
           tempSubtitle3.style.setProperty('line-height', '1.2', 'important');
           tempSubtitle3.style.setProperty('margin', '0', 'important');
-          console.log('Applied subtitle3 styling:', tempSubtitle3.style.color);
         }
         
         if (tempTextContainer) {
@@ -5958,7 +5903,6 @@
             tempLogo.style.setProperty('opacity', '1', 'important');
             tempLogo.style.setProperty('object-fit', 'contain', 'important');
             tempLogo.style.setProperty('z-index', '3', 'important');
-            console.log('Applied logo styling:', tempLogo.style.maxWidth);
           } catch (error) {
             console.error('Error applying logo styling:', error);
             // Continue without logo styling if there's an error
@@ -5972,12 +5916,10 @@
           tempBgImage.style.setProperty('z-index', '0', 'important');
         }
         
-        console.log('Export styling complete');
       }
       
       createExportBanner(exportDims) {
         try {
-          console.log('Creating export banner with dimensions:', exportDims);
           // Calculate scaled dimensions for export (same as preview scaling)
           const previewScale = this.inputs.previewScale && this.inputs.previewScale.value ? parseInt(this.inputs.previewScale.value) : 100;
         const titleSize = this.inputs.titleSize && this.inputs.titleSize.value ? parseInt(this.inputs.titleSize.value) : 48;
@@ -5994,6 +5936,7 @@
         const banner = document.createElement('div');
         banner.id = 'exportBanner';
         const bgColor = this.getBackgroundColor();
+        const { titleColor, subtitleColor, subtitle3Color } = this.getResolvedTextColors();
         banner.style.cssText = `
           position: relative;
           width: ${exportDims.width}px;
@@ -6036,7 +5979,7 @@
           font-size: ${scaledTitleSize}px;
           font-family: ${this.inputs.fontChoice && this.inputs.fontChoice.value ? this.inputs.fontChoice.value : 'Montserrat, Arial, sans-serif'};
           font-weight: 700;
-          color: ${this.inputs.titleColor && this.inputs.titleColor.value === '#ffffff' ? '#ffffff' : (this.inputs.titleColor && this.inputs.titleColor.value ? this.inputs.titleColor.value : '#ffffff')};
+          color: ${titleColor};
           opacity: 1;
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
           word-wrap: break-word;
@@ -6054,7 +5997,7 @@
           font-size: ${scaledSubtitleSize}px;
           font-family: ${this.inputs.fontChoice && this.inputs.fontChoice.value ? this.inputs.fontChoice.value : 'Montserrat, Arial, sans-serif'};
           font-weight: 300;
-          color: ${this.inputs.subtitleColor && this.inputs.subtitleColor.value === '#ffffff' ? '#ffffff' : (this.inputs.subtitleColor && this.inputs.subtitleColor.value ? this.inputs.subtitleColor.value : '#ffffff')};
+          color: ${subtitleColor};
           opacity: 1;
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
           word-wrap: break-word;
@@ -6072,7 +6015,7 @@
           font-size: ${scaledSubtitleSize}px;
           font-family: ${this.inputs.fontChoice && this.inputs.fontChoice.value ? this.inputs.fontChoice.value : 'Montserrat, Arial, sans-serif'};
           font-weight: 300;
-          color: ${this.inputs.subtitle3Color && this.inputs.subtitle3Color.value === '#ffffff' ? '#ffffff' : (this.inputs.subtitle3Color && this.inputs.subtitle3Color.value ? this.inputs.subtitle3Color.value : '#ffffff')};
+          color: ${subtitle3Color};
           opacity: 1;
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
           word-wrap: break-word;
@@ -6201,12 +6144,20 @@
         }
       }
       
+      // Single source of truth for title/subtitle text colors, used by the live
+      // preview and every export path (canvas, PDF, HTML) so they can't drift.
+      getResolvedTextColors() {
+        return {
+          titleColor: this.inputs.titleColor && this.inputs.titleColor.value ? this.inputs.titleColor.value : '#ffffff',
+          subtitleColor: this.inputs.subtitleColor && this.inputs.subtitleColor.value ? this.inputs.subtitleColor.value : '#ffffff',
+          subtitle3Color: this.inputs.subtitle3Color && this.inputs.subtitle3Color.value ? this.inputs.subtitle3Color.value : '#ffffff'
+        };
+      }
+
       getBackgroundColor() {
-        console.log('getBackgroundColor called');
-        
+
         // If there's a background image, use transparent background
         if (this.preview.bgImage.style.display !== 'none' && this.preview.bgImage.src) {
-          console.log('Background image detected, returning transparent');
           return 'transparent';
         }
         
@@ -6217,17 +6168,13 @@
           const color2 = this.inputs.gradientColor2 ? this.inputs.gradientColor2.value : '#8b0000';
           const color3 = this.inputs.gradientColor3 ? this.inputs.gradientColor3.value : '#660000';
           const direction = this.inputs.gradientDirection ? this.inputs.gradientDirection.value : '135deg';
-          console.log('Gradient enabled, returning gradient');
           return `linear-gradient(${direction}, ${color1} 0%, ${color2} 50%, ${color3} 100%)`;
         }
         
         const sinclairColor = this.inputs.sinclairColor && this.inputs.sinclairColor.value ? this.inputs.sinclairColor.value : '';
-        const customColor = this.inputs.customBgColor && this.inputs.customBgColor.value ? this.inputs.customBgColor.value : '#ffffff';
-        
-        console.log('Sinclair color:', sinclairColor, 'Custom color:', customColor);
+        const customColor = this.inputs.customBgColor && this.inputs.customBgColor.value ? this.inputs.customBgColor.value : '#0b325c';
         
         if (sinclairColor && sinclairColor !== '' && sinclairColor !== 'transparent') {
-          console.log('Processing Sinclair color:', sinclairColor);
           
           // Test if the CSS variable exists
           const testDiv = document.createElement('div');
@@ -6237,7 +6184,6 @@
           const bgColor = computedStyle.backgroundColor;
           document.body.removeChild(testDiv);
           
-          console.log('Computed Sinclair color:', bgColor);
           
           // If the color is still the variable name, it means the CSS variable wasn't found
           if (bgColor === `var(${sinclairColor})` || bgColor === 'rgba(0, 0, 0, 0)') {
@@ -6248,10 +6194,8 @@
           
           return bgColor;
         } else if (sinclairColor === 'transparent') {
-          console.log('Sinclair color is transparent');
           return 'transparent';
         } else {
-          console.log('Using custom color:', customColor);
           return customColor;
         }
       }
@@ -6265,7 +6209,6 @@
      }
 
      function removeLogo() {
-       console.log('Global removeLogo function called');
        if (bannerCreator) {
          bannerCreator.removeLogo();
        } else {
@@ -6291,32 +6234,26 @@
      }
 
      function downloadBanner() {
-       console.log('downloadBanner function called');
        bannerCreator.downloadBanner();
      }
 
     function exportAsPDF() {
-      console.log('exportAsPDF function called');
       bannerCreator.exportAsPDF();
     }
 
          function exportAsJPG() {
-       console.log('exportAsJPG function called');
        bannerCreator.exportAsJPG();
      }
 
      function exportAsWebP() {
-       console.log('exportAsWebP function called');
        bannerCreator.exportAsWebP();
      }
 
      function exportAsSVG() {
-       console.log('exportAsSVG function called');
        bannerCreator.exportAsSVG();
      }
 
      function exportAsHTML() {
-       console.log('exportAsHTML function called');
        bannerCreator.exportAsHTML();
      }
 
@@ -6347,55 +6284,45 @@
      
      function toggleSection(sectionId) {
        const section = document.getElementById(sectionId);
-       const toggle = document.getElementById(sectionId.replace('Section', 'Toggle'));
-       const controlSection = section.closest('.control-section');
-       
-       if (section.classList.contains('collapsed')) {
-         section.classList.remove('collapsed');
-         toggle.classList.remove('collapsed');
-         toggle.textContent = '▼';
-         if (controlSection) {
-           controlSection.classList.remove('collapsed');
-         }
-       } else {
-         section.classList.add('collapsed');
-         toggle.classList.add('collapsed');
-         toggle.textContent = '▶';
-         if (controlSection) {
-           controlSection.classList.add('collapsed');
-         }
-       }
+       if (!section) return;
+       setSectionCollapsed(sectionId, !section.classList.contains('collapsed'));
      }
-     
+
      function initializeCollapsibleSections() {
-       const sections = [
+       // Sections a new user needs right away stay open; less-common ones start
+       // collapsed so the page isn't a wall of controls on first load.
+       const openByDefault = [
          'templatesSection',
-         'textContentSection', 
-         'typographySection',
-         'dimensionsSection',
+         'textContentSection',
          'colorsSection',
+         'typographySection',
+         'dimensionsSection'
+       ];
+       const collapsedByDefault = [
          'imagesSection',
          'shapeSection',
          'exportOptionsSection'
        ];
-       
+
        // Fabric.js section is completely hidden (display: none)
-       
-       sections.forEach(sectionId => {
-         const section = document.getElementById(sectionId);
-         const toggle = document.getElementById(sectionId.replace('Section', 'Toggle'));
-         const controlSection = section?.closest('.control-section');
-         
-         if (section && toggle) {
-           // Keep sections open by default (remove collapsed class)
-           section.classList.remove('collapsed');
-           toggle.classList.remove('collapsed');
-           toggle.textContent = '▼';
-           if (controlSection) {
-             controlSection.classList.remove('collapsed');
-           }
-         }
-       });
+
+       openByDefault.forEach(sectionId => setSectionCollapsed(sectionId, false));
+       collapsedByDefault.forEach(sectionId => setSectionCollapsed(sectionId, true));
+     }
+
+     function setSectionCollapsed(sectionId, collapsed) {
+       const section = document.getElementById(sectionId);
+       const toggle = document.getElementById(sectionId.replace('Section', 'Toggle'));
+       const controlSection = section?.closest('.control-section');
+
+       if (!section || !toggle) return;
+
+       section.classList.toggle('collapsed', collapsed);
+       toggle.classList.toggle('collapsed', collapsed);
+       toggle.textContent = collapsed ? '▶' : '▼';
+       if (controlSection) {
+         controlSection.classList.toggle('collapsed', collapsed);
+       }
      }
      
      function setCanvasCourseCard() {
@@ -6442,7 +6369,6 @@
     // Global test function for icon display
     window.testIconDisplay = function() {
       if (window.bannerCreator) {
-        console.log('Testing icon display...');
         const testIcons = ['graduation-cap', 'star', 'heart', 'home', 'user'];
         window.bannerCreator.displayIconResults(testIcons);
       } else {
@@ -6519,7 +6445,14 @@
       };
 
       const template = templates[templateType];
-             if (template) {
+      if (template) {
+        const existingTitle = bannerCreator.inputs.title.value.trim();
+        const existingSubtitle = bannerCreator.inputs.subtitle2.value.trim();
+        const hasUnsavedContent = (existingTitle && existingTitle !== template.title) ||
+          (existingSubtitle && existingSubtitle !== template.subtitle2);
+        if (hasUnsavedContent && !window.confirm('Applying this template will replace your current title and subtitle. Continue?')) {
+          return;
+        }
          bannerCreator.inputs.title.value = template.title;
          bannerCreator.inputs.subtitle2.value = template.subtitle2;
         bannerCreator.inputs.sinclairColor.value = template.sinclairColor;
@@ -6532,6 +6465,11 @@
 
     // Initialize the application
     window.addEventListener('DOMContentLoaded', () => {
+      const versionInfo = document.getElementById('versionInfo');
+      if (versionInfo) {
+        versionInfo.textContent = `Built on ${BUILD_DATE} - Version ${BUILD_VERSION} - Bootstrap Enhanced`;
+      }
+
       bannerCreator = new BannerCreator();
       initializeCollapsibleSections();
       // Initialize gradient controls state
@@ -6540,128 +6478,93 @@
       }
       
       // Test CSS variables
-      console.log('Testing CSS variables...');
       const testDiv = document.createElement('div');
       testDiv.style.backgroundColor = 'var(--sinclair-red)';
       document.body.appendChild(testDiv);
       const computedStyle = getComputedStyle(testDiv);
-      console.log('Sinclair red computed as:', computedStyle.backgroundColor);
       document.body.removeChild(testDiv);
       
       // Add test function to global scope for debugging
       window.testBannerCreator = () => {
-        console.log('=== Banner Creator Test ===');
-        console.log('bannerCreator object:', bannerCreator);
-        console.log('Sinclair color input:', bannerCreator.inputs.sinclairColor);
-        console.log('Custom color input:', bannerCreator.inputs.customBgColor);
-        console.log('Current Sinclair value:', bannerCreator.inputs.sinclairColor.value);
-        console.log('Current custom color value:', bannerCreator.inputs.customBgColor.value);
         
         // Test getBackgroundColor function
-        console.log('Testing getBackgroundColor...');
         const bgColor = bannerCreator.getBackgroundColor();
-        console.log('getBackgroundColor result:', bgColor);
         
         // Test updateBanner function
-        console.log('Testing updateBanner...');
         bannerCreator.updateBanner();
-        console.log('updateBanner completed');
         
         // Test export function
-        console.log('Testing downloadBanner...');
         bannerCreator.downloadBanner();
       };
       
-      console.log('Banner Creator initialized. Run testBannerCreator() in console to test.');
       
       // Add a simple test for Sinclair colors
       window.testSinclairColors = () => {
-        console.log('=== Testing Sinclair Colors ===');
         
         // Test setting a Sinclair color
         bannerCreator.inputs.sinclairColor.value = '--sinclair-red';
-        console.log('Set Sinclair color to:', bannerCreator.inputs.sinclairColor.value);
         
         // Test getBackgroundColor
         const bgColor = bannerCreator.getBackgroundColor();
-        console.log('Background color result:', bgColor);
         
         // Test updateBanner
         bannerCreator.updateBanner();
-        console.log('updateBanner completed');
         
         // Check the actual banner background
         const banner = bannerCreator.preview.banner;
-        console.log('Banner background style:', banner.style.backgroundColor);
-        console.log('Banner background computed:', getComputedStyle(banner).backgroundColor);
         
         // Force a visual test
         banner.style.border = '3px solid red';
         setTimeout(() => {
           banner.style.border = '';
-          console.log('Visual test completed - did you see a red border?');
         }, 2000);
       };
       
       // Add a test for custom colors
       window.testCustomColors = () => {
-        console.log('=== Testing Custom Colors ===');
         
         // Test setting a custom color
         bannerCreator.inputs.customBgColor.value = '#ff0000';
         bannerCreator.inputs.sinclairColor.value = '';
-        console.log('Set custom color to:', bannerCreator.inputs.customBgColor.value);
         
         // Test getBackgroundColor
         const bgColor = bannerCreator.getBackgroundColor();
-        console.log('Background color result:', bgColor);
         
         // Test updateBanner
         bannerCreator.updateBanner();
-        console.log('updateBanner completed');
         
         // Check the actual banner background
         const banner = bannerCreator.preview.banner;
-        console.log('Banner background style:', banner.style.backgroundColor);
-        console.log('Banner background computed:', getComputedStyle(banner).backgroundColor);
       };
       
       // Add a simple test for export
       window.testExport = () => {
-        console.log('=== Testing Export ===');
         bannerCreator.downloadBanner();
       };
       
       // Add a test for logo removal
       window.testLogoRemoval = () => {
-        console.log('=== Testing Logo Removal ===');
         
         // First, set a logo
         bannerCreator.inputs.logoChoice.value = 'sinclair-white';
         bannerCreator.handleLogoChoice();
         
         setTimeout(() => {
-          console.log('Logo set, now testing removal...');
           bannerCreator.removeLogo();
           
           setTimeout(() => {
-            console.log('Logo removal completed');
-            console.log('Logo display:', bannerCreator.preview.logoImage.style.display);
-            console.log('Logo src:', bannerCreator.preview.logoImage.src);
           }, 200);
         }, 1000);
       };
       
       // Add a test for logo switching
       window.testLogoSwitching = () => {
-        console.log('=== Testing Logo Switching ===');
         
         const logos = ['sinclair-primary', 'sinclair-white', 'sinclair-compact'];
         let currentIndex = 0;
         
         const switchLogo = () => {
           const logoChoice = logos[currentIndex];
-          console.log('Switching to logo:', logoChoice);
           bannerCreator.inputs.logoChoice.value = logoChoice;
           bannerCreator.handleLogoChoice();
           
@@ -6677,19 +6580,15 @@
       
       // Add a test for logo removal and reapplication
       window.testLogoRemovalReapply = () => {
-        console.log('=== Testing Logo Removal and Reapplication ===');
         
         // Set a logo
         bannerCreator.inputs.logoChoice.value = 'sinclair-primary';
         bannerCreator.handleLogoChoice();
         
         setTimeout(() => {
-          console.log('Logo set, now removing...');
           bannerCreator.removeLogo();
           
           setTimeout(() => {
-            console.log('Logo removed, now trying to reapply...');
-            console.log('Current logo choice value:', bannerCreator.inputs.logoChoice.value);
             // Set the logo choice again and apply
             bannerCreator.inputs.logoChoice.value = 'sinclair-primary';
             bannerCreator.handleLogoChoice();
@@ -6699,41 +6598,35 @@
       
       // Add a simple test for export with logo
       window.testExportWithLogo = () => {
-        console.log('=== Testing Export with Logo ===');
         
         // Set a logo
         bannerCreator.inputs.logoChoice.value = 'sinclair-primary';
         bannerCreator.handleLogoChoice();
         
         setTimeout(() => {
-          console.log('Logo set, now testing export...');
           bannerCreator.downloadBanner();
         }, 1000);
       };
       
       // Add a test that exports without logo to verify the issue
       window.testExportWithoutLogo = () => {
-        console.log('=== Testing Export without Logo ===');
         
         // Remove any existing logo
         bannerCreator.removeLogo();
         
         setTimeout(() => {
-          console.log('Logo removed, now testing export...');
           bannerCreator.downloadBanner();
         }, 1000);
       };
       
       // Add a test that temporarily hides logo for export
       window.testExportWithHiddenLogo = () => {
-        console.log('=== Testing Export with Hidden Logo ===');
         
         // Set a logo
         bannerCreator.inputs.logoChoice.value = 'sinclair-primary';
         bannerCreator.handleLogoChoice();
         
         setTimeout(() => {
-          console.log('Logo set, now hiding logo and testing export...');
           
           // Temporarily hide logo
           const originalDisplay = bannerCreator.preview.logoImage.style.display;
@@ -6750,21 +6643,18 @@
       
       // Add a test for export with logo (logo included in export with html2canvas)
       window.testExportWithLogo = () => {
-        console.log('=== Testing Export with Logo (Logo included in export with html2canvas) ===');
         
         // Set a logo
         bannerCreator.inputs.logoChoice.value = 'sinclair-primary';
         bannerCreator.handleLogoChoice();
         
         setTimeout(() => {
-          console.log('Logo set, now testing export (logo should be included in export)...');
           bannerCreator.downloadBanner();
         }, 1000);
       };
       
       // Add a test to check logo file availability
       window.testLogoFiles = () => {
-        console.log('=== Testing Logo File Availability ===');
         
         const logoUrls = {
           'sinclair-primary': './logos/sinclair-primary.png',
@@ -6775,10 +6665,8 @@
         Object.entries(logoUrls).forEach(([name, url]) => {
           const img = new Image();
           img.onload = () => {
-            console.log(`✅ ${name}: File exists and loads successfully`);
           };
           img.onerror = () => {
-            console.log(`❌ ${name}: File not found or cannot be loaded`);
           };
           img.src = url;
         });
@@ -6786,29 +6674,18 @@
       
       // Add a test to debug export issues
       window.debugExport = () => {
-        console.log('=== Debugging Export Issues ===');
         
-        console.log('Current logo state:', {
-          exists: !!bannerCreator.preview.logoImage,
-          display: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.style.display : 'N/A',
-          src: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.src : 'N/A',
-          complete: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.complete : 'N/A'
-        });
         
-        console.log('html2canvas available:', typeof html2canvas !== 'undefined');
-        console.log('jspdf available:', typeof jspdf !== 'undefined');
       };
       
       // Add a test to verify logo is being added to export
       window.testLogoInExport = () => {
-        console.log('=== Testing Logo in Export ===');
         
         // Set a logo
         bannerCreator.inputs.logoChoice.value = 'sinclair-primary';
         bannerCreator.handleLogoChoice();
         
         setTimeout(() => {
-          console.log('Logo set, now testing export banner creation...');
           
           // Test the createExportBanner function directly
           const exportDims = bannerCreator.getExportDimensions();
@@ -6816,15 +6693,8 @@
           
           // Check if logo element is in the banner
           const logoElements = tempBanner.querySelectorAll('img');
-          console.log('Logo elements found in export banner:', logoElements.length);
           
           logoElements.forEach((img, index) => {
-            console.log(`Logo ${index + 1}:`, {
-              src: img.src,
-              style: img.style.cssText,
-              width: img.width,
-              height: img.height
-            });
           });
           
           // Clean up
@@ -6836,37 +6706,16 @@
       
       // Add a test to check export settings and logo state
       window.testExportSettings = () => {
-        console.log('=== Testing Export Settings and Logo State ===');
         
-        console.log('Export Settings:', {
-          exportSize: bannerCreator.inputs.exportSize ? bannerCreator.inputs.exportSize.value : 'N/A',
-          exportQuality: bannerCreator.inputs.exportQuality ? bannerCreator.inputs.exportQuality.value : 'N/A',
-          exportFileName: bannerCreator.inputs.exportFileName ? bannerCreator.inputs.exportFileName.value : 'N/A'
-        });
         
-        console.log('Logo Settings:', {
-          logoChoice: bannerCreator.inputs.logoChoice ? bannerCreator.inputs.logoChoice.value : 'N/A',
-          logoSize: bannerCreator.inputs.logoSize ? bannerCreator.inputs.logoSize.value : 'N/A',
-          logoUpload: bannerCreator.inputs.logoUpload ? bannerCreator.inputs.logoUpload.value : 'N/A'
-        });
         
-        console.log('Current Logo State:', {
-          exists: !!bannerCreator.preview.logoImage,
-          display: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.style.display : 'N/A',
-          src: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.src : 'N/A',
-          complete: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.complete : 'N/A',
-          naturalWidth: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.naturalWidth : 'N/A',
-          naturalHeight: bannerCreator.preview.logoImage ? bannerCreator.preview.logoImage.naturalHeight : 'N/A'
-        });
         
         // Test logo file accessibility
         if (bannerCreator.preview.logoImage && bannerCreator.preview.logoImage.src) {
           const testImg = new Image();
           testImg.onload = () => {
-            console.log('✅ Logo file is accessible and loads successfully');
           };
           testImg.onerror = () => {
-            console.log('❌ Logo file is not accessible');
           };
           testImg.src = bannerCreator.preview.logoImage.src;
         }
@@ -6893,11 +6742,9 @@
 
       // Test function for debugging
       window.testIconSearch = function() {
-        console.log('Testing icon search...');
         if (bannerCreator) {
           bannerCreator.searchIcons('graduation');
         } else {
-          console.log('BannerCreator not available');
         }
       };
 
@@ -6907,10 +6754,6 @@
 
       // Test function for help panel debugging
       window.testHelpPanel = function() {
-        console.log('Testing help panel...');
-        console.log('toggleHelpPanel function:', typeof toggleHelpPanel);
-        console.log('helpPanel element:', document.getElementById('helpPanel'));
-        console.log('helpToggle button:', document.querySelector('.help-toggle'));
         
         // Try to call the function directly
         if (typeof toggleHelpPanel === 'function') {
@@ -6922,13 +6765,7 @@
 
       // Test function for Fabric.js debugging
       window.testFabric = function() {
-        console.log('=== Testing Fabric.js ===');
-        console.log('Fabric.js available:', typeof fabric !== 'undefined');
         if (typeof fabric !== 'undefined') {
-          console.log('Fabric.js version:', fabric.version);
-          console.log('Fabric Canvas available:', typeof fabric.Canvas !== 'undefined');
-          console.log('Fabric Image available:', typeof fabric.Image !== 'undefined');
-          console.log('Fabric filters available:', typeof fabric.Image.filters !== 'undefined');
         }
         
         // Test creating a simple canvas
@@ -6939,7 +6776,6 @@
           document.body.appendChild(testCanvas);
           
           const fabricTest = new fabric.Canvas(testCanvas);
-          console.log('Fabric canvas creation test: SUCCESS');
           
           // Clean up
           fabricTest.dispose();
@@ -6951,7 +6787,6 @@
 
       // Test function to force load help content
       window.forceLoadHelp = function() {
-        console.log('Force loading help content...');
         if (typeof loadHelpContent === 'function') {
           loadHelpContent();
         } else {
@@ -6965,7 +6800,6 @@
       let originalImageData = null;
 
       function openFabricEditor() {
-        console.log('openFabricEditor called');
         
         // Check if Fabric.js is available
         if (typeof fabric === 'undefined') {
@@ -6988,7 +6822,6 @@
           return;
         }
 
-        console.log('Opening fabric editor...');
         
         // Show the editor
         container.style.display = 'block';
@@ -7003,7 +6836,6 @@
           const canvasWidth = Math.max(800, Math.min(originalWidth, 1200));
           const canvasHeight = Math.max(600, Math.min(originalHeight, 800));
           
-          console.log('Using canvas size:', canvasWidth, 'x', canvasHeight);
           
           // Update canvas element size
           const canvasElement = document.getElementById('fabricCanvas');
@@ -7023,11 +6855,9 @@
             renderOnAddRemove: true
           });
           
-          console.log('Fabric canvas created:', fabricCanvas);
 
           // Load the background image into Fabric.js with maximum quality preservation
           fabric.Image.fromURL(bgImage.src, function(img) {
-            console.log('Image loaded into fabric:', img);
             fabricImage = img;
             
             // Preserve original image quality and make it editable
@@ -7076,7 +6906,6 @@
               quality: 1.0,
               multiplier: 1
             });
-            console.log('Fabric editor ready with maximum quality settings!');
           }, { 
             crossOrigin: 'anonymous',
             preserveAspectRatio: true,
@@ -7091,7 +6920,6 @@
       }
 
       function applyFilter(type, value) {
-        console.log('applyFilter called:', type, value);
         
         if (!fabricCanvas || !fabricImage) {
           console.error('Fabric canvas or image not available');
@@ -7102,23 +6930,18 @@
         try {
           switch(type) {
             case 'brightness':
-              console.log('Applying brightness filter');
               fabricImage.filters.push(new fabric.Image.filters.Brightness({ brightness: value - 1 }));
               break;
             case 'contrast':
-              console.log('Applying contrast filter');
               fabricImage.filters.push(new fabric.Image.filters.Contrast({ contrast: value - 1 }));
               break;
             case 'saturation':
-              console.log('Applying saturation filter');
               fabricImage.filters.push(new fabric.Image.filters.Saturation({ saturation: value - 1 }));
               break;
             case 'blur':
-              console.log('Applying blur filter');
               fabricImage.filters.push(new fabric.Image.filters.Blur({ blur: value }));
               break;
             case 'sharpen':
-              console.log('Applying sharpen filter');
               fabricImage.filters.push(new fabric.Image.filters.Convolute({
                 matrix: [0, -1, 0, -1, 5, -1, 0, -1, 0]
               }));
@@ -7128,10 +6951,8 @@
               return;
           }
           
-          console.log('Applying filters to image...');
           fabricImage.applyFilters();
           fabricCanvas.renderAll();
-          console.log('Filter applied successfully');
           
         } catch (error) {
           console.error('Error applying filter:', error);
@@ -7228,7 +7049,6 @@
         }
 
         try {
-          console.log('Saving fabric changes with high quality...');
           
           // Get quality setting from dropdown
           const qualitySelect = document.getElementById('fabricQuality');
@@ -7241,10 +7061,8 @@
             const originalWidth = bgImage.naturalWidth || 1200;
             const originalHeight = bgImage.naturalHeight || 800;
             qualityMultiplier = Math.max(originalWidth / fabricCanvas.getWidth(), originalHeight / fabricCanvas.getHeight());
-            console.log('Using original size multiplier:', qualityMultiplier);
           } else {
             qualityMultiplier = parseInt(qualityValue);
-            console.log('Using quality multiplier:', qualityMultiplier);
           }
           
           // Get the edited image data with maximum quality settings
@@ -7255,7 +7073,6 @@
             enableRetinaScaling: true
           });
           
-          console.log('Image data generated, updating background...');
           
           // Update the background image
           const bgImage = document.getElementById('bgImage');
@@ -7274,7 +7091,6 @@
                 bannerCreator.updateBanner();
               }
               
-              console.log('Image changes applied successfully!');
               alert('Image changes applied successfully!');
             };
             newImage.onerror = function() {
@@ -7332,7 +7148,6 @@
 
       // Logo Type Button Functions
       function setLogoType(type) {
-        console.log('Setting logo type to:', type);
         
         // Update the hidden input value
         const logoTypeInput = document.getElementById('logoType');
@@ -7373,17 +7188,13 @@
 
       // Help Panel Functions
       function toggleHelpPanel() {
-        console.log('toggleHelpPanel called');
         const helpPanel = document.getElementById('helpPanel');
-        console.log('helpPanel element:', helpPanel);
         
         if (helpPanel) {
           helpPanel.classList.toggle('active');
-          console.log('Help panel active:', helpPanel.classList.contains('active'));
           
           // Load help content if not already loaded
           if (helpPanel.classList.contains('active')) {
-            console.log('Help panel is active, loading content...');
             setTimeout(() => {
               loadHelpContent();
             }, 100); // Small delay to ensure panel is visible
@@ -7394,19 +7205,15 @@
       }
 
       function loadHelpContent() {
-        console.log('loadHelpContent called');
         const helpContent = document.getElementById('helpContent');
-        console.log('helpContent element:', helpContent);
         
         if (!helpContent) {
           console.error('Help content element not found!');
           return;
         }
         
-        console.log('Current help content:', helpContent.innerHTML.trim());
         
         // Always load content for now (remove the condition that was preventing loading)
-        console.log('Loading help content...');
 
         helpContent.innerHTML = `
           <div class="help-section">
@@ -7556,7 +7363,6 @@ ${message}
 
       // Initialize Bootstrap components and help panel on page load
       document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, initializing components...');
         
         // Initialize Bootstrap tooltips
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -7566,11 +7372,9 @@ ${message}
         
         // Load help content if help panel is opened
         const helpToggle = document.querySelector('.help-toggle');
-        console.log('Help toggle button found:', helpToggle);
         
         if (helpToggle) {
           helpToggle.addEventListener('click', function() {
-            console.log('Help toggle clicked');
             setTimeout(loadHelpContent, 100);
           });
         } else {
