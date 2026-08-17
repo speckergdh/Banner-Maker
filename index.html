@@ -1245,6 +1245,11 @@
       transition: none;
     }
 
+    #logoImage.dragging, #logoIcon.dragging {
+      cursor: grabbing;
+      transition: none;
+    }
+
     #placedIconsLayer {
       position: absolute;
       inset: 0;
@@ -1254,10 +1259,17 @@
 
     .placed-icon {
       position: absolute;
+      display: block;
       transform: translate(-50%, -50%);
       cursor: grab;
       pointer-events: auto;
       filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+    }
+
+    .placed-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     .placed-icon.dragging {
@@ -2480,7 +2492,12 @@
                  <input type="file" id="logoUpload" accept="image/*">
                  <button class="btn-remove" onclick="removeLogo()">Remove Logo</button>
                </div>
-               
+
+               <div class="form-group">
+                 <label>Drag the logo directly on the banner to fine-tune its position</label>
+                 <button type="button" id="resetLogoPosition" class="btn-clear">Reset Logo Position</button>
+               </div>
+
                <div class="form-group">
                  <label>Logo Type</label>
                  <div class="logo-type-buttons">
@@ -2669,6 +2686,8 @@
                 <label for="placedIconSize">Selected Icon Size (px)</label>
                 <input type="range" id="placedIconSize" value="60" min="20" max="200" step="5">
                 <span id="placedIconSizeValue">60px</span>
+                <label for="placedIconColor">Selected Icon Color</label>
+                <input type="color" id="placedIconColor" value="#ffffff">
                 <button type="button" id="deletePlacedIcon" class="btn-remove">Delete Selected Icon</button>
               </div>
             </div>
@@ -2966,6 +2985,7 @@
         this.bgImageYOffsetValue = document.getElementById('bgImageYOffsetValue');
         this.resetBgImagePosition = document.getElementById('resetBgImagePosition');
         this.resetShapePositionBtn = document.getElementById('resetShapePosition');
+        this.resetLogoPositionBtn = document.getElementById('resetLogoPosition');
 
         // Background image arrow controls
         this.bgImageUp = document.getElementById('bgImageUp');
@@ -2985,10 +3005,36 @@
         // Drag offset for the decorative shape, on top of its preset position
         this.shapeDragOffset = { x: 0, y: 0 };
 
+        // Drag offset for the logo (image or icon/emoji), on top of its
+        // default right-aligned position - shared since only one is ever
+        // visible at a time based on logoType.
+        this.logoDragOffset = { x: 0, y: 0 };
+
         // Custom icons placed/dragged onto the banner (Lucide icon library)
         this.placedIcons = [];
         this.selectedIconId = null;
         this.placedIconsLayer = document.getElementById('placedIconsLayer');
+        this.iconSvgCache = new Map();
+      }
+
+      // Fetches an icon's raw SVG source once and reuses it - every export
+      // path and the live preview all need the same text to recolor.
+      async getIconSvgText(url) {
+        if (this.iconSvgCache.has(url)) {
+          return this.iconSvgCache.get(url);
+        }
+        const text = await fetch(url).then(res => res.text());
+        this.iconSvgCache.set(url, text);
+        return text;
+      }
+
+      // Lucide icons are drawn with stroke="currentColor" (and no fill) -
+      // swap that for an explicit color so the icon works as a rasterized
+      // image or a standalone HTML string, not just live CSS inheritance.
+      recolorSvgText(svgText, color) {
+        return svgText
+          .replace(/stroke="currentColor"/g, `stroke="${color}"`)
+          .replace(/fill="currentColor"/g, `fill="${color}"`);
       }
 
              bindEvents() {
@@ -3115,6 +3161,9 @@
          if (this.resetShapePositionBtn) {
            this.resetShapePositionBtn.addEventListener('click', () => this.resetShapePosition());
          }
+         if (this.resetLogoPositionBtn) {
+           this.resetLogoPositionBtn.addEventListener('click', () => this.resetLogoPosition());
+         }
 
          // Background image arrow controls
          if (this.bgImageUp) {
@@ -3150,6 +3199,7 @@
          // Interactive background image positioning
          this.initializeBackgroundImagePositioning();
          this.initializeShapeDragging();
+         this.initializeLogoDragging();
          this.initializePlacedIconEvents();
 
          // Icon controls
@@ -3341,6 +3391,82 @@
          this.updateShape();
        }
 
+       initializeLogoDragging() {
+         this.attachLogoDrag(this.preview.logoImage);
+         this.attachLogoDrag(this.preview.logoIcon);
+       }
+
+       attachLogoDrag(el) {
+         let isDragging = false;
+         let startX = 0;
+         let startY = 0;
+         let startOffsetX = 0;
+         let startOffsetY = 0;
+
+         const startDrag = (clientX, clientY) => {
+           if (el.style.display === 'none') return;
+           isDragging = true;
+           startX = clientX;
+           startY = clientY;
+           startOffsetX = this.logoDragOffset.x;
+           startOffsetY = this.logoDragOffset.y;
+           el.classList.add('dragging');
+         };
+
+         const moveDrag = (clientX, clientY) => {
+           if (!isDragging) return;
+           const rect = this.preview.banner.getBoundingClientRect();
+           this.logoDragOffset.x = startOffsetX + ((clientX - startX) / rect.width) * 100;
+           this.logoDragOffset.y = startOffsetY + ((clientY - startY) / rect.height) * 100;
+           this.applyLogoDragTransform();
+         };
+
+         const endDrag = () => {
+           if (isDragging) {
+             isDragging = false;
+             el.classList.remove('dragging');
+           }
+         };
+
+         el.style.cursor = 'grab';
+         el.addEventListener('mousedown', (e) => {
+           startDrag(e.clientX, e.clientY);
+           e.preventDefault();
+           e.stopPropagation();
+         });
+         window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+         window.addEventListener('mouseup', endDrag);
+
+         el.addEventListener('touchstart', (e) => {
+           const touch = e.touches[0];
+           startDrag(touch.clientX, touch.clientY);
+           e.stopPropagation();
+         }, { passive: true });
+         window.addEventListener('touchmove', (e) => {
+           if (!isDragging) return;
+           const touch = e.touches[0];
+           moveDrag(touch.clientX, touch.clientY);
+         }, { passive: true });
+         window.addEventListener('touchend', endDrag);
+       }
+
+       // logoImage is flex-positioned with no base transform; logoIcon keeps
+       // its translateY(-50%) centering and the drag offset layers on top.
+       applyLogoDragTransform() {
+         const rect = this.preview.banner.getBoundingClientRect();
+         const offsetXpx = (this.logoDragOffset.x / 100) * rect.width;
+         const offsetYpx = (this.logoDragOffset.y / 100) * rect.height;
+         const translatePart = `translate(${offsetXpx}px, ${offsetYpx}px)`;
+
+         this.preview.logoImage.style.setProperty('transform', translatePart, 'important');
+         this.preview.logoIcon.style.setProperty('transform', `translateY(-50%) ${translatePart}`, 'important');
+       }
+
+       resetLogoPosition() {
+         this.logoDragOffset = { x: 0, y: 0 };
+         this.applyLogoDragTransform();
+       }
+
        initializePlacedIconEvents() {
          const searchBtn = document.getElementById('searchIconLibrary');
          const searchInput = document.getElementById('iconLibrarySearch');
@@ -3364,8 +3490,16 @@
              icon.sizePx = parseInt(sizeSlider.value);
              document.getElementById('placedIconSizeValue').textContent = `${icon.sizePx}px`;
              const el = this.placedIconsLayer.querySelector(`[data-icon-id="${icon.id}"]`);
-             if (el) el.style.width = `${icon.sizePx}px`;
+             if (el) {
+               el.style.width = `${icon.sizePx}px`;
+               el.style.height = `${icon.sizePx}px`;
+             }
            });
+         }
+
+         const colorPicker = document.getElementById('placedIconColor');
+         if (colorPicker) {
+           colorPicker.addEventListener('input', () => this.recolorSelectedIcon(colorPicker.value));
          }
 
          const deleteBtn = document.getElementById('deletePlacedIcon');
@@ -3381,42 +3515,83 @@
          });
        }
 
-       searchIconLibrary(query) {
-         // Curated keyword -> Lucide (MIT-licensed, unpkg-hosted) icon slugs
+       async searchIconLibrary(query) {
+         // Curated keyword -> Lucide (MIT-licensed, unpkg-hosted) icon slugs.
+         // ~330 names, all verified to resolve on the CDN before shipping.
          const iconLibrary = {
-           education: ['graduation-cap', 'book-open', 'book', 'pencil', 'backpack', 'presentation', 'library', 'school', 'ruler', 'calculator'],
-           business: ['briefcase', 'building-2', 'building', 'trending-up', 'bar-chart-3', 'pie-chart', 'handshake', 'coins', 'wallet', 'target'],
-           science: ['flask-conical', 'microscope', 'atom', 'dna', 'test-tube', 'telescope', 'magnet', 'thermometer'],
-           technology: ['laptop', 'monitor', 'cpu', 'code', 'smartphone', 'wifi', 'database', 'server', 'terminal'],
-           arts: ['palette', 'brush', 'pen-tool', 'music', 'film', 'camera', 'image', 'drama'],
-           healthcare: ['heart-pulse', 'stethoscope', 'pill', 'syringe', 'cross', 'bandage', 'activity', 'hospital'],
-           sports: ['trophy', 'dumbbell', 'medal', 'award', 'flag', 'bike'],
-           nature: ['leaf', 'tree-pine', 'sun', 'cloud', 'flower-2', 'mountain', 'droplet', 'sprout'],
-           food: ['coffee', 'pizza', 'utensils', 'apple', 'cake', 'sandwich'],
-           travel: ['plane', 'car', 'ship', 'train', 'map', 'compass', 'globe', 'map-pin'],
-           communication: ['mail', 'phone', 'message-circle', 'bell', 'users', 'user', 'megaphone'],
-           general: ['star', 'heart', 'home', 'calendar', 'clock', 'gift', 'flame', 'gem', 'crown', 'lightbulb', 'rocket', 'puzzle']
+           education: ['graduation-cap', 'book-open', 'book', 'book-copy', 'book-marked', 'book-text', 'pencil', 'pencil-line', 'pencil-ruler', 'backpack', 'presentation', 'library', 'school', 'ruler', 'calculator', 'notebook', 'notebook-pen', 'clipboard', 'clipboard-list', 'clipboard-check', 'clipboard-pen', 'folder-open', 'folder', 'pen-line', 'pen-tool', 'highlighter', 'eraser', 'paperclip', 'stamp', 'award', 'medal', 'trophy', 'badge-check'],
+           business: ['briefcase', 'building-2', 'building', 'trending-up', 'trending-down', 'bar-chart-3', 'bar-chart', 'bar-chart-2', 'pie-chart', 'line-chart', 'handshake', 'coins', 'wallet', 'target', 'users', 'user-check', 'contact', 'id-card', 'receipt', 'file-text', 'calendar-check', 'banknote', 'credit-card', 'landmark', 'store', 'shopping-bag', 'package', 'truck', 'factory', 'warehouse'],
+           science: ['flask-conical', 'flask-round', 'microscope', 'atom', 'dna', 'test-tube', 'test-tube-2', 'telescope', 'magnet', 'thermometer', 'beaker', 'biohazard', 'radiation', 'orbit', 'waves', 'activity', 'zap', 'sigma', 'pi', 'infinity', 'function-square'],
+           technology: ['laptop', 'laptop-2', 'monitor', 'monitor-smartphone', 'cpu', 'code', 'code-2', 'smartphone', 'tablet', 'wifi', 'wifi-off', 'database', 'server', 'terminal', 'bug', 'binary', 'bluetooth', 'usb', 'cloud', 'cloud-cog', 'network', 'router', 'webcam', 'printer', 'mouse', 'keyboard', 'memory-stick', 'hard-drive', 'battery', 'battery-charging', 'plug', 'power'],
+           arts: ['palette', 'brush', 'paintbrush', 'paintbrush-2', 'pen-tool', 'music', 'music-2', 'music-3', 'music-4', 'film', 'camera', 'camera-off', 'image', 'images', 'drama', 'clapperboard', 'disc', 'disc-2', 'disc-3', 'headphones', 'mic', 'mic-2', 'video', 'videotape', 'aperture', 'contrast', 'pipette'],
+           healthcare: ['heart-pulse', 'stethoscope', 'pill', 'syringe', 'cross', 'bandage', 'activity', 'hospital', 'ambulance', 'thermometer', 'brain', 'bone', 'ear', 'eye', 'hand-heart', 'shield-plus', 'pill-bottle', 'venus', 'mars'],
+           sports: ['trophy', 'dumbbell', 'medal', 'award', 'flag', 'bike', 'volleyball', 'tent', 'mountain-snow', 'footprints', 'timer', 'target', 'flag-triangle-right'],
+           nature: ['leaf', 'tree-pine', 'tree-deciduous', 'sun', 'sun-moon', 'cloud', 'cloud-rain', 'cloud-snow', 'cloud-lightning', 'flower', 'flower-2', 'mountain', 'droplet', 'droplets', 'sprout', 'wind', 'snowflake', 'rainbow', 'sunrise', 'sunset', 'moon', 'star', 'earth', 'globe'],
+           food: ['coffee', 'pizza', 'utensils', 'utensils-crossed', 'apple', 'cake', 'cake-slice', 'sandwich', 'ice-cream-cone', 'ice-cream-bowl', 'egg', 'fish', 'beef', 'carrot', 'wheat', 'cherry', 'grape', 'banana', 'popcorn', 'soup', 'salad', 'wine', 'beer', 'cup-soda', 'milk'],
+           travel: ['plane', 'car', 'ship', 'train', 'map', 'compass', 'globe', 'map-pin', 'luggage', 'bus', 'bike', 'anchor', 'sailboat', 'fuel', 'navigation', 'tent', 'palmtree', 'ferris-wheel', 'signpost'],
+           communication: ['mail', 'phone', 'message-circle', 'message-square', 'bell', 'users', 'user', 'megaphone', 'send', 'inbox', 'at-sign', 'rss', 'share', 'share-2', 'voicemail', 'phone-call'],
+           files: ['file', 'file-text', 'folder', 'folder-open', 'archive', 'save', 'download', 'upload', 'link', 'paperclip', 'copy', 'clipboard', 'trash', 'trash-2', 'file-plus', 'file-check'],
+           shapes: ['circle', 'square', 'triangle', 'star', 'heart', 'hexagon', 'pentagon', 'octagon', 'diamond', 'shapes'],
+           people: ['user', 'users', 'smile', 'frown', 'meh', 'laugh', 'angry', 'user-check', 'user-plus', 'user-minus', 'baby', 'venus-and-mars', 'person-standing'],
+           tools: ['wrench', 'hammer', 'settings', 'tool-case', 'cog', 'sliders', 'sliders-horizontal', 'ruler', 'scissors', 'magnet', 'key', 'lock', 'unlock', 'shield', 'shield-check'],
+           time: ['calendar', 'calendar-days', 'calendar-check', 'clock', 'alarm-clock', 'timer', 'hourglass', 'watch'],
+           general: ['star', 'heart', 'home', 'gift', 'flame', 'gem', 'crown', 'lightbulb', 'rocket', 'puzzle', 'anchor', 'umbrella', 'feather', 'sparkles', 'zap', 'flag', 'bookmark', 'tag', 'tags', 'thumbs-up', 'thumbs-down'],
+           animals: ['cat', 'dog', 'bird', 'fish', 'rabbit', 'bug', 'turtle', 'squirrel', 'feather'],
+           seasonal: ['snowflake', 'gift', 'tree-pine', 'ghost', 'egg', 'sparkles', 'party-popper', 'cake'],
+           gaming: ['gamepad-2', 'dice-1', 'dice-5', 'joystick', 'puzzle', 'trophy', 'swords', 'crown'],
+           finance: ['dollar-sign', 'euro', 'pound-sterling', 'coins', 'wallet', 'piggy-bank', 'landmark', 'trending-up', 'credit-card', 'receipt']
          };
 
          const q = (query || document.getElementById('iconLibrarySearch')?.value || '').toLowerCase().trim();
          let slugs = [];
          if (!q) {
-           slugs = iconLibrary.general;
-         } else {
-           for (const [category, icons] of Object.entries(iconLibrary)) {
-             if (category.includes(q) || q.includes(category)) {
-               slugs.push(...icons);
-             }
+           // Nothing searched yet - show a broad sample across every
+           // category rather than just one, so it's clear the library is big.
+           const categories = Object.values(iconLibrary);
+           for (let i = 0; i < 3; i++) {
+             categories.forEach(icons => { if (icons[i]) slugs.push(icons[i]); });
            }
-           if (slugs.length === 0) {
-             slugs = Object.values(iconLibrary).flat().filter(slug => slug.includes(q));
-           }
-           if (slugs.length === 0) {
-             slugs = iconLibrary.general;
+           slugs = [...new Set(slugs)].slice(0, 48);
+           this.displayIconLibraryResults(slugs);
+           return;
+         }
+
+         // Curated categories first (fast, no network, high-relevance for
+         // common terms like "business" or "science").
+         for (const [category, icons] of Object.entries(iconLibrary)) {
+           if (category.includes(q) || q.includes(category)) {
+             slugs.push(...icons);
            }
          }
-         slugs = [...new Set(slugs)].slice(0, 24);
+         if (slugs.length === 0) {
+           slugs = Object.values(iconLibrary).flat().filter(slug => slug.includes(q));
+         }
+
+         // Layer in Lucide's full ~1,770-icon catalog (name + tag search) so
+         // less common terms ("robot", "chess", "coffee") still find results
+         // instead of just falling back to a generic default set.
+         const tags = await this.loadIconTags();
+         const catalogMatches = Object.keys(tags).filter(name =>
+           name.includes(q) || (tags[name] || []).some(tag => tag.includes(q))
+         );
+         slugs.push(...catalogMatches);
+
+         if (slugs.length === 0) {
+           slugs = iconLibrary.general;
+         }
+         slugs = [...new Set(slugs)].slice(0, 48);
          this.displayIconLibraryResults(slugs);
+       }
+
+       async loadIconTags() {
+         if (this.iconTagsCache) return this.iconTagsCache;
+         try {
+           this.iconTagsCache = await fetch('https://unpkg.com/lucide-static@latest/tags.json').then(res => res.json());
+         } catch (error) {
+           console.error('Error loading full icon catalog:', error);
+           this.iconTagsCache = {};
+         }
+         return this.iconTagsCache;
        }
 
        displayIconLibraryResults(slugs) {
@@ -3439,7 +3614,7 @@
          });
        }
 
-       addPlacedIcon(url) {
+       async addPlacedIcon(url) {
          const id = `icon-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
          const count = this.placedIcons.length;
          // Stagger repeated adds a bit so they don't stack exactly on top
@@ -3449,17 +3624,25 @@
            url,
            xPercent: Math.max(10, Math.min(90, 50 + (count % 5) * 8 - 16)),
            yPercent: Math.max(15, Math.min(85, 50 + (count % 3) * 10 - 10)),
-           sizePx: 60
+           sizePx: 60,
+           color: '#ffffff'
          };
          this.placedIcons.push(icon);
 
-         const el = document.createElement('img');
-         el.src = url;
+         const el = document.createElement('span');
          el.className = 'placed-icon';
          el.dataset.iconId = id;
          el.style.left = `${icon.xPercent}%`;
          el.style.top = `${icon.yPercent}%`;
          el.style.width = `${icon.sizePx}px`;
+         el.style.height = `${icon.sizePx}px`;
+
+         try {
+           const svgText = await this.getIconSvgText(url);
+           el.innerHTML = this.recolorSvgText(svgText, icon.color);
+         } catch (error) {
+           console.error('Error loading icon SVG:', error);
+         }
 
          const deleteBadge = document.createElement('span');
          deleteBadge.className = 'placed-icon-delete';
@@ -3476,6 +3659,18 @@
 
          this.selectPlacedIcon(id);
          this.showMessage('✅ Icon added - drag it into place', 'success');
+       }
+
+       recolorSelectedIcon(color) {
+         const icon = this.placedIcons.find(i => i.id === this.selectedIconId);
+         if (!icon) return;
+         icon.color = color;
+         const el = this.placedIconsLayer.querySelector(`[data-icon-id="${icon.id}"]`);
+         if (!el) return;
+         const svg = el.querySelector('svg');
+         if (svg) {
+           svg.setAttribute('stroke', color);
+         }
        }
 
        attachPlacedIconDrag(el, icon) {
@@ -3548,6 +3743,8 @@
            const sizeValue = document.getElementById('placedIconSizeValue');
            if (sizeSlider) sizeSlider.value = icon.sizePx;
            if (sizeValue) sizeValue.textContent = `${icon.sizePx}px`;
+           const colorPicker = document.getElementById('placedIconColor');
+           if (colorPicker) colorPicker.value = icon.color;
          } else if (controls) {
            controls.style.display = 'none';
          }
@@ -3790,12 +3987,12 @@
        
 
 
-       showHTMLPreview() {
+       async showHTMLPreview() {
          try {
            this.showLoadingState(true);
-           
+
            // Generate the HTML code
-           const htmlCode = this.generateHTMLCode();
+           const htmlCode = await this.generateHTMLCode();
            
            // Display the code in the Bootstrap modal
            const codeDisplay = document.getElementById('htmlCodeDisplay');
@@ -4255,7 +4452,7 @@
          return iconToEmoji[iconName] || '🎓'; // Default to graduation cap if not found
        }
 
-       generateHTMLCode() {
+       async generateHTMLCode() {
          const exportDims = this.getExportDimensions();
          const title = this.inputs.title && this.inputs.title.value ? this.inputs.title.value : '';
          const subtitle2 = this.inputs.subtitle2 && this.inputs.subtitle2.value ? this.inputs.subtitle2.value : '';
@@ -4291,6 +4488,8 @@
          const hasLogo = this.preview.logoImage && this.preview.logoImage.style.display !== 'none' && this.preview.logoImage.src;
          const logoType = this.inputs.logoType ? this.inputs.logoType.value : 'upload';
          const hasIcon = logoType === 'icon';
+         const shapeHTML = this.buildShapeHTMLString(exportDims.width, exportDims.height);
+         const iconsHTML = await this.buildPlacedIconsHTMLString();
 
          return `<!DOCTYPE html>
 <html lang="en">
@@ -4308,6 +4507,8 @@
         </div>
         ${hasLogo ? `<img src="logo.png" alt="Logo" style="${isAnyAutoWidth ? 'flex-shrink: 0; width: ' + logoSize + 'px; height: auto;' : 'position: absolute; right: 20px; top: 20px; width: ' + logoSize + 'px; height: auto;'}">` : ''}
         ${hasIcon ? `<div style="${isAnyAutoWidth ? 'flex-shrink: 0; font-size: ' + logoSize + 'px;' : 'position: absolute; right: 20px; top: 20px; font-size: ' + logoSize + 'px;'} line-height: 1;">${this.currentIcon || '🎓'}</div>` : ''}
+        ${shapeHTML}
+        ${iconsHTML}
     </div>
 </body>
 </html>`;
@@ -4778,6 +4979,99 @@
          return el;
        }
 
+       // Fully self-contained inline-styled markup for the standalone HTML
+       // exports, which have no access to this app's own stylesheet (unlike
+       // buildShapeElement(), which leans on the #shapeElement.block-* CSS
+       // classes for position and only works inside this document).
+       buildShapeHTMLString(exportWidth, exportHeight) {
+         const shapeType = this.inputs.shapeType && this.inputs.shapeType.value ? this.inputs.shapeType.value : '';
+         if (!shapeType) return '';
+
+         const shapeColor = this.inputs.shapeColor && this.inputs.shapeColor.value ? this.inputs.shapeColor.value : '#ffffff';
+         const shapeSize = this.inputs.shapeSize && this.inputs.shapeSize.value ? parseInt(this.inputs.shapeSize.value) : 20;
+         const shapeOpacity = this.inputs.shapeOpacity && this.inputs.shapeOpacity.value ? parseInt(this.inputs.shapeOpacity.value) : 100;
+         const shapePosition = this.inputs.shapePosition && this.inputs.shapePosition.value ? this.inputs.shapePosition.value : 'default';
+
+         const positions = {
+           'block-left': 'left:0; top:0;', 'block-right': 'right:0; top:0;',
+           'block-top': 'top:0; left:0;', 'block-bottom': 'bottom:0; left:0;',
+           'block-wide-left': 'left:0; top:0;', 'block-wide-right': 'right:0; top:0;',
+           'block-wide-top': 'top:0; left:0;', 'block-wide-bottom': 'bottom:0; left:0;',
+           'block-corner-tl': 'top:0; left:0;', 'block-corner-tr': 'top:0; right:0;',
+           'block-corner-bl': 'bottom:0; left:0;', 'block-corner-br': 'bottom:0; right:0;',
+           'block-center': 'top:50%; left:50%;', 'block-diagonal': 'top:0; left:0;',
+           'block-circle': 'top:50%; left:50%; border-radius:50%;',
+           'block-oval': 'top:50%; left:50%; border-radius:50%;',
+           'block-center-left': 'top:50%; left:20px;', 'block-center-right': 'top:50%; right:20px;',
+           'block-center-top': 'top:20px; left:50%;', 'block-center-bottom': 'bottom:20px; left:50%;',
+           'block-diamond': 'top:50%; left:50%;', 'block-hexagon': 'top:50%; left:50%;'
+         };
+         const transforms = {
+           'block-center': 'translate(-50%, -50%)', 'block-circle': 'translate(-50%, -50%)',
+           'block-oval': 'translate(-50%, -50%)', 'block-hexagon': 'translate(-50%, -50%)',
+           'block-diamond': 'translate(-50%, -50%) rotate(45deg)', 'block-diagonal': 'rotate(45deg)',
+           'block-center-left': 'translateY(-50%)', 'block-center-right': 'translateY(-50%)',
+           'block-center-top': 'translateX(-50%)', 'block-center-bottom': 'translateX(-50%)'
+         };
+
+         let width, height;
+         if (shapeType.includes('left') || shapeType.includes('right')) {
+           width = `${shapeSize}px`; height = '100%';
+         } else if (shapeType.includes('top') || shapeType.includes('bottom')) {
+           width = '100%'; height = `${shapeSize}px`;
+         } else if (shapeType.includes('oval')) {
+           width = `${shapeSize * 2}px`; height = `${shapeSize}px`;
+         } else if (shapeType.includes('diagonal')) {
+           width = '100%'; height = '100%';
+         } else {
+           width = `${shapeSize}px`; height = `${shapeSize}px`;
+         }
+
+         const margin = shapePosition === 'inset' ? '10px' : shapePosition === 'outset' ? '-10px' : '0';
+         const offsetXpx = (this.shapeDragOffset.x / 100) * exportWidth;
+         const offsetYpx = (this.shapeDragOffset.y / 100) * exportHeight;
+         const baseTransform = transforms[shapeType] || '';
+         const finalTransform = `${baseTransform} translate(${offsetXpx}px, ${offsetYpx}px)`.trim();
+
+         const useGradient = this.inputs.shapeGradientEnabled && this.inputs.shapeGradientEnabled.checked;
+         let backgroundCss;
+         if (useGradient) {
+           const gradientColor1 = this.inputs.shapeGradientColor1 && this.inputs.shapeGradientColor1.value ? this.inputs.shapeGradientColor1.value : '#ffffff';
+           const gradientColor2 = this.inputs.shapeGradientColor2 && this.inputs.shapeGradientColor2.value ? this.inputs.shapeGradientColor2.value : '#cccccc';
+           const gradientDirection = this.inputs.shapeGradientDirection && this.inputs.shapeGradientDirection.value ? this.inputs.shapeGradientDirection.value : 'to right';
+           backgroundCss = `background: linear-gradient(${gradientDirection}, ${gradientColor1}, ${gradientColor2});`;
+         } else {
+           backgroundCss = `background: ${shapeColor};`;
+         }
+
+         if (shapeType.includes('triangle')) {
+           // Border-drawn triangle - the "fill" comes from border-bottom, not background
+           return `<div style="position:absolute; top:50%; left:50%; transform: translate(-50%, -50%) translate(${offsetXpx}px, ${offsetYpx}px); width:0; height:0; border-left:${shapeSize / 2}px solid transparent; border-right:${shapeSize / 2}px solid transparent; border-bottom:${shapeSize * 1.73}px solid ${shapeColor}; opacity:${shapeOpacity / 100}; z-index:3;"></div>`;
+         }
+
+         const posCss = positions[shapeType] || 'top:0; left:0;';
+         return `<div style="position:absolute; ${posCss} width:${width}; height:${height}; ${backgroundCss} opacity:${shapeOpacity / 100}; margin:${margin}; transform:${finalTransform}; z-index:3;"></div>`;
+       }
+
+       // Fully self-contained inline colored SVG markup for the standalone
+       // HTML exports - one <span> per placed icon.
+       async buildPlacedIconsHTMLString() {
+         const parts = await Promise.all(this.placedIcons.map(async icon => {
+           try {
+             const svgText = await this.getIconSvgText(icon.url);
+             const colored = this.recolorSvgText(svgText, icon.color).replace(
+               '<svg',
+               `<svg style="width:100%; height:100%; display:block;"`
+             );
+             return `<span style="position:absolute; left:${icon.xPercent}%; top:${icon.yPercent}%; width:${icon.sizePx}px; height:${icon.sizePx}px; transform:translate(-50%, -50%); z-index:4;">${colored}</span>`;
+           } catch (error) {
+             console.error('Error building icon HTML:', error);
+             return '';
+           }
+         }));
+         return parts.join('\n        ');
+       }
+
        toggleShapeGradientControls() {
          const shapeGradientControls = document.getElementById('shapeGradientControls');
          if (this.inputs.shapeGradientEnabled && this.inputs.shapeGradientEnabled.checked) {
@@ -5050,12 +5344,25 @@
             
             // Draw background (solid color, gradient, or image)
             const hasBgImage = this.preview.bgImage && this.preview.bgImage.style.display !== 'none' && this.preview.bgImage.src;
-            
+
             if (hasBgImage) {
+              // Fill with the banner's own background color first. With
+              // "contain" fit, or a zoomed-out image, the photo doesn't
+              // fully cover the canvas - without this the gap stays fully
+              // transparent, which most image viewers render as solid black.
+              const fallbackBg = this.getBackgroundColor(true);
+              const fallbackSolid = fallbackBg.includes('linear-gradient')
+                ? (fallbackBg.match(/#[0-9a-fA-F]{3,6}/) || ['#0b325c'])[0]
+                : fallbackBg;
+              if (fallbackSolid && fallbackSolid !== 'transparent') {
+                ctx.fillStyle = fallbackSolid;
+                ctx.fillRect(0, 0, originalWidth, originalHeight);
+              }
+
               // Handle background image
               const bgImg = new Image();
               bgImg.crossOrigin = 'anonymous';
-              
+
               bgImg.onload = () => {
                 // Get the actual CSS properties from the preview
                 const bgImageStyle = getComputedStyle(this.preview.bgImage);
@@ -5141,10 +5448,28 @@
                   }
                 }
                 
+                // Apply the zoom slider the same way the live preview does:
+                // a CSS transform:scale() centered on the banner, layered on
+                // top of the cover/contain-fit rectangle above. "fill" mode
+                // skips this in the live preview too, since object-fit:fill
+                // already stretches to the full box on its own.
+                if (objectFit !== 'fill') {
+                  const bgImageScale = this.inputs.bgImageScale ? this.inputs.bgImageScale.value : 100;
+                  const zoom = Math.min(parseInt(bgImageScale) / 100, 2.0);
+                  const centerX = originalWidth / 2;
+                  const centerY = originalHeight / 2;
+                  const newDrawWidth = drawWidth * zoom;
+                  const newDrawHeight = drawHeight * zoom;
+                  drawX = centerX + (drawX - centerX) * zoom;
+                  drawY = centerY + (drawY - centerY) * zoom;
+                  drawWidth = newDrawWidth;
+                  drawHeight = newDrawHeight;
+                }
+
                 // Apply opacity
                 const bgImageOpacity = this.inputs.bgImageOpacity ? this.inputs.bgImageOpacity.value : 100;
                 ctx.globalAlpha = bgImageOpacity / 100;
-                
+
                 // Draw background image with proper fitting and positioning
                 ctx.drawImage(bgImg, drawX, drawY, drawWidth, drawHeight);
                 
@@ -5530,12 +5855,16 @@
         async drawPlacedIconsOnCanvas(ctx, originalWidth, originalHeight) {
           for (const icon of this.placedIcons) {
             try {
+              // Canvas has no CSS cascade to pick up currentColor, so bake
+              // the chosen color into the SVG source before rasterizing it.
+              const svgText = await this.getIconSvgText(icon.url);
+              const coloredSvg = this.recolorSvgText(svgText, icon.color);
+              const dataUri = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(coloredSvg)))}`;
               const img = await new Promise((resolve, reject) => {
                 const image = new Image();
-                image.crossOrigin = 'anonymous';
                 image.onload = () => resolve(image);
                 image.onerror = reject;
-                image.src = icon.url;
+                image.src = dataUri;
               });
               const size = icon.sizePx;
               const x = (icon.xPercent / 100) * originalWidth - size / 2;
@@ -5574,8 +5903,13 @@
                 logoX = originalWidth - finalLogoSize - 20; // Closer to right edge for course card
               }
               
-              const logoY = (originalHeight - finalLogoSize) / 2;
-              
+              let logoY = (originalHeight - finalLogoSize) / 2;
+
+              // Apply the same drag offset (stored as % of banner size) used
+              // by the live preview.
+              logoX += (this.logoDragOffset.x / 100) * originalWidth;
+              logoY += (this.logoDragOffset.y / 100) * originalHeight;
+
               // Scale logo to fit better
               const aspectRatio = logoImg.width / logoImg.height;
               let drawWidth = finalLogoSize;
@@ -5712,7 +6046,7 @@
            const scale = quality === 1.0 ? 4 : quality === 0.9 ? 3 : quality === 0.8 ? 2 : 1.5;
            
            // Create a new banner with export dimensions using createExportBanner
-           const tempBanner = this.createExportBanner(exportDims);
+           const tempBanner = await this.createExportBanner(exportDims);
            
            // Temporarily add to DOM for rendering
            tempBanner.style.position = 'absolute';
@@ -5764,7 +6098,7 @@
            const scaledHeight = exportDims.height * scale;
            
            // Create a new banner with export dimensions using createExportBanner
-           const tempBanner = this.createExportBanner(exportDims);
+           const tempBanner = await this.createExportBanner(exportDims);
            
            // Temporarily add to DOM for rendering
            tempBanner.style.position = 'absolute';
@@ -5816,7 +6150,7 @@
            const scaledHeight = exportDims.height * scale;
            
            // Create a new banner with export dimensions using createExportBanner
-           const tempBanner = this.createExportBanner(exportDims);
+           const tempBanner = await this.createExportBanner(exportDims);
            
            // Temporarily add to DOM for rendering
            tempBanner.style.position = 'absolute';
@@ -5878,7 +6212,9 @@
            const hasLogo = this.preview.logoImage && this.preview.logoImage.style.display !== 'none' && this.preview.logoImage.src;
            const logoType = this.inputs.logoType ? this.inputs.logoType.value : 'upload';
            const hasIcon = logoType === 'icon';
-           
+           const shapeHTML = this.buildShapeHTMLString(exportDims.width, exportDims.height);
+           const iconsHTML = await this.buildPlacedIconsHTMLString();
+
            // Generate HTML
                            let html = `<!DOCTYPE html>
 <html lang="en">
@@ -5896,6 +6232,8 @@
         </div>
         ${hasLogo ? `<img src="logo.png" alt="Logo" style="position: absolute; right: 20px; top: 20px; width: ${logoSize}px; height: auto;">` : ''}
         ${hasIcon ? `<div style="position: absolute; right: 20px; top: 20px; font-size: ${logoSize}px; color: ${this.inputs.iconColor ? this.inputs.iconColor.value : '#ffffff'}; line-height: 1;">${this.inputs.iconEmoji ? this.inputs.iconEmoji.value : '🎓'}</div>` : ''}
+        ${shapeHTML}
+        ${iconsHTML}
     </div>
 </body>
 </html>`;
@@ -5924,7 +6262,7 @@
            const exportDims = this.getExportDimensions();
            
            // Create a new banner with export dimensions using createExportBanner
-           const tempBanner = this.createExportBanner(exportDims);
+           const tempBanner = await this.createExportBanner(exportDims);
            
            // Temporarily add to DOM for rendering
            tempBanner.style.position = 'absolute';
@@ -5971,7 +6309,7 @@
            const exportDims = this.getExportDimensions();
            
            // Create a new banner with export dimensions using createExportBanner
-           const tempBanner = this.createExportBanner(exportDims);
+           const tempBanner = await this.createExportBanner(exportDims);
            
            // Temporarily add to DOM for rendering
            tempBanner.style.position = 'absolute';
@@ -6329,7 +6667,7 @@
         
       }
       
-      createExportBanner(exportDims) {
+      async createExportBanner(exportDims) {
         try {
           // Calculate scaled dimensions for export (same as preview scaling)
           const previewScale = this.inputs.previewScale && this.inputs.previewScale.value ? parseInt(this.inputs.previewScale.value) : 100;
@@ -6524,13 +6862,15 @@
 
         // Add logo if present
         if (this.preview.logoImage && this.preview.logoImage.style.display !== 'none' && this.preview.logoImage.src) {
+          const logoOffsetXpx = (this.logoDragOffset.x / 100) * exportDims.width;
+          const logoOffsetYpx = (this.logoDragOffset.y / 100) * exportDims.height;
           const logo = document.createElement('img');
           logo.src = this.preview.logoImage.src;
           logo.style.cssText = `
             position: absolute;
             right: ${scaledPadding}px;
             top: 50%;
-            transform: translateY(-50%);
+            transform: translateY(-50%) translate(${logoOffsetXpx}px, ${logoOffsetYpx}px);
             z-index: 3;
             width: ${scaledLogoSize}px;
             height: auto;
@@ -6542,19 +6882,31 @@
         }
 
         // Add any custom icons the user has placed and dragged onto the banner
-        this.placedIcons.forEach(icon => {
-          const iconEl = document.createElement('img');
-          iconEl.src = icon.url;
+        for (const icon of this.placedIcons) {
+          const iconEl = document.createElement('span');
           iconEl.style.cssText = `
             position: absolute;
             left: ${icon.xPercent}%;
             top: ${icon.yPercent}%;
             width: ${icon.sizePx}px;
+            height: ${icon.sizePx}px;
+            display: block;
             transform: translate(-50%, -50%);
             z-index: 4;
           `;
+          try {
+            const svgText = await this.getIconSvgText(icon.url);
+            iconEl.innerHTML = this.recolorSvgText(svgText, icon.color);
+            const svg = iconEl.querySelector('svg');
+            if (svg) {
+              svg.style.width = '100%';
+              svg.style.height = '100%';
+            }
+          } catch (error) {
+            console.error('Error loading icon SVG for export:', error);
+          }
           banner.appendChild(iconEl);
-        });
+        }
 
         return banner;
         } catch (error) {
@@ -6586,10 +6938,15 @@
         };
       }
 
-      getBackgroundColor() {
+      // ignoreImage: true returns the user's chosen color/gradient even when
+      // a background image is layered on top - used as a fallback fill so
+      // gaps (contain-fit letterboxing, a zoomed-out image) show that color
+      // instead of a fully transparent canvas, which most viewers render as
+      // solid black.
+      getBackgroundColor(ignoreImage = false) {
 
         // If there's a background image, use transparent background
-        if (this.preview.bgImage.style.display !== 'none' && this.preview.bgImage.src) {
+        if (!ignoreImage && this.preview.bgImage.style.display !== 'none' && this.preview.bgImage.src) {
           return 'transparent';
         }
         
@@ -7107,11 +7464,11 @@
         bannerCreator.inputs.logoChoice.value = 'sinclair-primary';
         bannerCreator.handleLogoChoice();
         
-        setTimeout(() => {
-          
+        setTimeout(async () => {
+
           // Test the createExportBanner function directly
           const exportDims = bannerCreator.getExportDimensions();
-          const tempBanner = bannerCreator.createExportBanner(exportDims);
+          const tempBanner = await bannerCreator.createExportBanner(exportDims);
           
           // Check if logo element is in the banner
           const logoElements = tempBanner.querySelectorAll('img');
