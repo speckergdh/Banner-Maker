@@ -1097,7 +1097,9 @@
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.3);
-      z-index: 1;
+      /* Above #bannerTextContainer (z-index: 2) so drag-to-reposition can be
+         grabbed anywhere over the banner, not just the strip behind the text */
+      z-index: 5;
       cursor: crosshair;
       display: none;
     }
