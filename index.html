@@ -3251,7 +3251,12 @@
 
          const moveDrag = (clientX, clientY) => {
            if (!isDraggingImage) return;
-           const rect = bgImage.getBoundingClientRect();
+           // Measured against the banner (not the image itself) so drag feel
+           // stays consistent regardless of how zoomed in/out the image
+           // currently is - the image's own rendered size now varies a lot
+           // with zoom since it's sized explicitly rather than always
+           // matching the container at 100%/100%.
+           const rect = this.preview.banner.getBoundingClientRect();
            // Share one divisor between axes so horizontal drag feels as
            // responsive as vertical - the banner is much wider than it is
            // tall, so dividing each axis by its own dimension made a given
@@ -3303,8 +3308,11 @@
          }, { passive: true });
          window.addEventListener('touchend', endDrag);
 
-         // Show crop interface when image is loaded
+         // Show crop interface when image is loaded, and re-run the sizing
+         // math now that natural width/height are actually available
+         // (immediately after setting .src they're still 0).
          bgImage.addEventListener('load', showCropInterface);
+         bgImage.addEventListener('load', () => this.updateBanner());
 
          // Scroll to zoom in/out for finer framing, same range as the Image
          // Scale slider (50-200%) so both controls stay in sync.
@@ -5178,51 +5186,35 @@
             const bgImageYOffset = this.inputs.bgImageYOffset ? this.inputs.bgImageYOffset.value : '0';
             const bgImageScale = this.inputs.bgImageScale ? this.inputs.bgImageScale.value : '100';
             const bgImageOpacity = this.inputs.bgImageOpacity ? this.inputs.bgImageOpacity.value : '100';
-            
-            // Calculate position with offset
-            const basePosition = bgImagePosition;
-            const xOffset = parseInt(bgImageXOffset);
-            const yOffset = parseInt(bgImageYOffset);
-            
-            // Create custom position string with offset
-            let customPosition = basePosition;
-            if (xOffset !== 0 || yOffset !== 0) {
-              // Convert position to percentage and add offset
-              let xPercent = 50; // default center
-              let yPercent = 50; // default center
-              
-              // Parse base position
-              if (basePosition.includes('left')) xPercent = 0;
-              else if (basePosition.includes('right')) xPercent = 100;
-              if (basePosition.includes('top')) yPercent = 0;
-              else if (basePosition.includes('bottom')) yPercent = 100;
-              
-              // Offset is already on a -50..50 scale, so it applies directly
-              xPercent = Math.max(0, Math.min(100, xPercent + xOffset));
-              yPercent = Math.max(0, Math.min(100, yPercent + yOffset));
 
-              customPosition = `${xPercent}% ${yPercent}%`;
+            // Convert base position + offset slider into an absolute 0-100 focus point
+            let xPercent = 50;
+            let yPercent = 50;
+            if (bgImagePosition.includes('left')) xPercent = 0;
+            else if (bgImagePosition.includes('right')) xPercent = 100;
+            if (bgImagePosition.includes('top')) yPercent = 0;
+            else if (bgImagePosition.includes('bottom')) yPercent = 100;
+            xPercent = Math.max(0, Math.min(100, xPercent + parseInt(bgImageXOffset)));
+            yPercent = Math.max(0, Math.min(100, yPercent + parseInt(bgImageYOffset)));
+
+            const naturalWidth = this.preview.bgImage.naturalWidth;
+            const naturalHeight = this.preview.bgImage.naturalHeight;
+            this.preview.bgImage.style.setProperty('opacity', `${bgImageOpacity / 100}`, 'important');
+            this.preview.bgImage.style.setProperty('object-fit', 'fill', 'important');
+
+            if (naturalWidth && naturalHeight) {
+              const bannerRect = this.preview.banner.getBoundingClientRect();
+              const containerWidth = bannerRect.width || parseInt(bannerWidth) || 1200;
+              const containerHeight = bannerRect.height || parseInt(bannerHeight) || 200;
+              const rect = this.computeBgImageRect(
+                naturalWidth, naturalHeight, containerWidth, containerHeight,
+                bgImageFit, xPercent, yPercent, parseInt(bgImageScale)
+              );
+              this.preview.bgImage.style.setProperty('width', `${rect.width}px`, 'important');
+              this.preview.bgImage.style.setProperty('height', `${rect.height}px`, 'important');
+              this.preview.bgImage.style.setProperty('left', `${rect.left}px`, 'important');
+              this.preview.bgImage.style.setProperty('top', `${rect.top}px`, 'important');
             }
-            
-            // For "fill" option, don't use scale transform, let object-fit handle it
-            if (bgImageFit === 'fill') {
-              this.preview.bgImage.style.setProperty('object-fit', 'fill', 'important');
-              this.preview.bgImage.style.setProperty('object-position', customPosition, 'important');
-              this.preview.bgImage.style.setProperty('transform', 'none', 'important');
-              this.preview.bgImage.style.setProperty('opacity', `${bgImageOpacity / 100}`, 'important');
-            } else {
-              // For other fit options, use scale transform but contain it
-              this.preview.bgImage.style.setProperty('object-fit', bgImageFit, 'important');
-              this.preview.bgImage.style.setProperty('object-position', customPosition, 'important');
-              
-              // Limit scale to prevent overflow - max scale based on container size
-              const maxScale = Math.min(bgImageScale / 100, 2.0); // Cap at 200%
-              this.preview.bgImage.style.setProperty('transform', `scale(${maxScale})`, 'important');
-              this.preview.bgImage.style.setProperty('opacity', `${bgImageOpacity / 100}`, 'important');
-            }
-            
-            this.preview.bgImage.style.setProperty('transform-origin', 'center center', 'important');
-            this.preview.bgImage.style.setProperty('overflow', 'hidden', 'important');
           }
 
                      // Update text content
@@ -5455,7 +5447,9 @@
                 // already stretches to the full box on its own.
                 if (objectFit !== 'fill') {
                   const bgImageScale = this.inputs.bgImageScale ? this.inputs.bgImageScale.value : 100;
-                  const zoom = Math.min(parseInt(bgImageScale) / 100, 2.0);
+                  const zoom = this.computeZoomScaleForDimensions(
+                    parseInt(bgImageScale), bgImg.width, bgImg.height, originalWidth, originalHeight
+                  );
                   const centerX = originalWidth / 2;
                   const centerY = originalHeight / 2;
                   const newDrawWidth = drawWidth * zoom;
@@ -6458,6 +6452,77 @@
          this.preview.logoIcon.style.maxHeight = `${finalLogoSize}px`;
        }
        
+       // Zooming out used to just shrink the already cover-cropped image,
+       // opening gaps without ever revealing the parts of the photo that
+       // got cropped off. Below 100 this now interpolates the transform
+       // scale toward the point where the whole image is visible (contain
+       // fit), so zooming out actually shows more of the picture; above 100
+       // it zooms in further as before. Shared by the live preview and every
+       // export path so they all behave identically.
+       computeZoomScaleForDimensions(sliderValue, naturalWidth, naturalHeight, containerWidth, containerHeight) {
+         if (!naturalWidth || !naturalHeight || !containerWidth || !containerHeight) {
+           return Math.min(sliderValue / 100, 2.0);
+         }
+         const coverScale = Math.max(containerWidth / naturalWidth, containerHeight / naturalHeight);
+         const containScale = Math.min(containerWidth / naturalWidth, containerHeight / naturalHeight);
+         const minRelativeScale = coverScale > 0 ? containScale / coverScale : 1;
+
+         if (sliderValue <= 100) {
+           const t = Math.max(0, Math.min(1, (sliderValue - 50) / 50));
+           return minRelativeScale + t * (1 - minRelativeScale);
+         }
+         const t = Math.max(0, Math.min(1, (sliderValue - 100) / 100));
+         return 1 + t * (2.0 - 1);
+       }
+
+       // Explicit pixel width/height/left/top for the background image,
+       // instead of object-fit + transform:scale(). CSS transform:scale()
+       // scales the IMG's own box (locked to the banner's aspect ratio),
+       // not the object-fit:cover content, so it could never actually
+       // reveal more of a differently-shaped photo when zooming out - it
+       // just shrank a same-shaped miniature. Computing the draw rect
+       // directly (same approach the canvas/PNG export already used
+       // correctly) fixes that, and now the live preview and PNG export
+       // share this exact math.
+       computeBgImageRect(naturalWidth, naturalHeight, containerWidth, containerHeight, fit, xPercent, yPercent, sliderValue) {
+         if (fit === 'fill') {
+           return { width: containerWidth, height: containerHeight, left: 0, top: 0 };
+         }
+
+         const imgAspect = naturalWidth / naturalHeight;
+         const containerAspect = containerWidth / containerHeight;
+         let width, height;
+
+         if (fit === 'contain') {
+           if (imgAspect > containerAspect) {
+             width = containerWidth;
+             height = containerWidth / imgAspect;
+           } else {
+             height = containerHeight;
+             width = containerHeight * imgAspect;
+           }
+         } else {
+           // cover (default)
+           if (imgAspect > containerAspect) {
+             height = containerHeight;
+             width = containerHeight * imgAspect;
+           } else {
+             width = containerWidth;
+             height = containerWidth / imgAspect;
+           }
+         }
+
+         if (fit !== 'contain') {
+           const zoom = this.computeZoomScaleForDimensions(sliderValue, naturalWidth, naturalHeight, containerWidth, containerHeight);
+           width *= zoom;
+           height *= zoom;
+         }
+
+         const left = (containerWidth - width) * (xPercent / 100);
+         const top = (containerHeight - height) * (yPercent / 100);
+         return { width, height, left, top };
+       }
+
        updateBgImageScale() {
          const scale = this.inputs.bgImageScale && this.inputs.bgImageScale.value ? this.inputs.bgImageScale.value : 100;
          if (this.bgImageScaleValue) {
@@ -6830,9 +6895,14 @@
               overflow: hidden;
             `;
           } else {
-            // Limit scale to prevent overflow - max scale based on container size
-            const maxScale = Math.min(bgImageScale / 100, 2.0); // Cap at 200%
-            
+            // Below 100% this interpolates toward showing the full image
+            // (contain-fit) instead of just shrinking the cover-fit crop -
+            // same math as the live preview, just against export dimensions.
+            const maxScale = this.computeZoomScaleForDimensions(
+              parseInt(bgImageScale), this.preview.bgImage.naturalWidth, this.preview.bgImage.naturalHeight,
+              exportDims.width, exportDims.height
+            );
+
             bgImage.style.cssText = `
               position: absolute;
               top: 0;
