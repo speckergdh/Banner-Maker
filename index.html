@@ -18,20 +18,7 @@
   <!-- Other Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
-  <script>
-    // Check if Fabric.js loaded properly
-    window.addEventListener('load', function() {
-      if (typeof fabric === 'undefined') {
-        console.error('Fabric.js failed to load!');
-        alert('Fabric.js library failed to load. Please refresh the page.');
-      } else {
-      }
-      
-      
-    });
-  </script>
-  
+
   <style>
          /* LSS Variables for Sinclair Brand Colors + Bootstrap Theme */
      :root {
@@ -204,8 +191,48 @@
          counter-reset: section-step;
        }
 
+       .controls-grid.tab-panel {
+         display: none;
+       }
+
+       .controls-grid.tab-panel.active {
+         display: grid;
+       }
+
+       .controls-tabs {
+         display: flex;
+         gap: var(--spacing-xs);
+         max-width: 1600px;
+         margin: 0 auto var(--spacing-md) auto;
+         overflow-x: auto;
+       }
+
+       .tab-button {
+         flex: 1;
+         padding: var(--spacing-sm) var(--spacing-md);
+         border: 2px solid var(--border-color);
+         border-radius: var(--border-radius-md);
+         background: var(--surface-color-solid);
+         color: var(--text-primary);
+         font-weight: 600;
+         font-size: 0.95rem;
+         cursor: pointer;
+         white-space: nowrap;
+         transition: all 0.2s ease;
+       }
+
+       .tab-button:hover {
+         border-color: var(--primary-color);
+       }
+
+       .tab-button.active {
+         background: var(--primary-color);
+         border-color: var(--primary-color);
+         color: #ffffff;
+       }
+
        /* Numbers the visible panels in workflow order; display:none sections
-          (Fabric.js) generate no box so they're skipped automatically. */
+          generate no box so they're skipped automatically. */
        .section-header h3::before {
          counter-increment: section-step;
          content: counter(section-step) ". ";
@@ -1000,6 +1027,19 @@
         transition: box-shadow 0.3s ease;
       }
       
+      .preview-toolbar {
+        display: flex;
+        justify-content: center;
+        gap: var(--spacing-xs);
+        margin-bottom: var(--spacing-sm);
+        flex-wrap: wrap;
+      }
+
+      .preview-toolbar button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       .preview-wrapper {
         overflow: hidden;
         border-radius: var(--border-radius-md);
@@ -1633,7 +1673,17 @@
        .container {
          padding: var(--spacing-md);
        }
-       
+
+       .controls-tabs {
+         flex-wrap: wrap;
+       }
+
+       .tab-button {
+         flex: 1 1 45%;
+         white-space: normal;
+         font-size: 0.85rem;
+       }
+
        .header h1 {
          font-size: 2rem;
        }
@@ -1650,9 +1700,7 @@
        
        .preview-panel {
          padding: var(--spacing-md);
-         position: sticky;
-         top: 20px;
-         z-index: 100;
+         position: static;
        }
      }
 
@@ -1974,41 +2022,6 @@
       line-height: 1.2;
     }
 
-    /* Fabric.js Button Styles */
-    .filter-buttons, .transform-buttons, .effect-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-xs);
-      margin-top: var(--spacing-xs);
-    }
-
-    .filter-btn, .transform-btn, .effect-btn {
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border: 2px solid var(--border-color);
-      border-radius: var(--border-radius-sm);
-      background: var(--surface-color-solid);
-      color: var(--text-primary);
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      flex: 1;
-      min-width: 80px;
-      text-align: center;
-    }
-
-    .filter-btn:hover, .transform-btn:hover, .effect-btn:hover {
-      border-color: var(--primary-color);
-      background: var(--surface-color);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .filter-btn:active, .transform-btn:active, .effect-btn:active {
-      transform: translateY(0);
-      box-shadow: none;
-    }
-
     /* HTML Preview Container */
 .html-preview-container {
       position: absolute;
@@ -2140,6 +2153,11 @@
       <!-- Preview Panel -->
       <div class="preview-panel">
         <h2>Live Preview</h2>
+        <div class="preview-toolbar">
+          <button type="button" id="undoBtn" class="btn btn-secondary btn-sm" onclick="bannerCreator.undo()" title="Undo last change (Ctrl+Z)" disabled>↩️ Undo</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="bannerCreator.saveDraft()" title="Save your current progress in this browser">💾 Save Draft</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="bannerCreator.loadDraft()" title="Restore your last saved draft">📂 Load Draft</button>
+        </div>
         <div class="preview-wrapper">
                  <div id="bannerPreview">
            <div id="emptyStateHint">Pick a template or start typing to see your banner</div>
@@ -2218,8 +2236,14 @@
       <!-- Controls Panel -->
       <div class="controls-panel">
         <h2 class="customization-title">Customization Options</h2>
-        
-        <div class="controls-grid">
+
+        <div class="controls-tabs" role="tablist">
+          <button type="button" class="tab-button active" data-tab="content" onclick="switchControlsTab('content')">Content &amp; Style</button>
+          <button type="button" class="tab-button" data-tab="images" onclick="switchControlsTab('images')">Images &amp; Shapes</button>
+          <button type="button" class="tab-button" data-tab="layout" onclick="switchControlsTab('layout')">Layout &amp; Export</button>
+        </div>
+
+        <div class="controls-grid tab-panel active" data-tab="content">
           <!-- Template Presets Section -->
           <div class="control-section">
             <div class="section-header" onclick="toggleSection('templatesSection')">
@@ -2425,7 +2449,9 @@
              </div>
              </div>
            </div>
+        </div>
 
+        <div class="controls-grid tab-panel" data-tab="images">
           <!-- Images Section -->
           <div class="control-section">
             <div class="section-header" onclick="toggleSection('imagesSection')">
@@ -2733,6 +2759,8 @@
                 <label for="placedImageSize">Selected Photo Width (px)</label>
                 <input type="range" id="placedImageSize" value="150" min="40" max="600" step="10">
                 <span id="placedImageSizeValue">150px</span>
+                <button type="button" id="bringImageForward" class="btn btn-secondary btn-sm">Bring Forward</button>
+                <button type="button" id="sendImageBackward" class="btn btn-secondary btn-sm">Send Backward</button>
                 <button type="button" id="deletePlacedImage" class="btn-remove">Delete Selected Photo</button>
               </div>
             </div>
@@ -2760,11 +2788,15 @@
                 <span id="placedIconSizeValue">60px</span>
                 <label for="placedIconColor">Selected Icon Color</label>
                 <input type="color" id="placedIconColor" value="#ffffff">
+                <button type="button" id="bringIconForward" class="btn btn-secondary btn-sm">Bring Forward</button>
+                <button type="button" id="sendIconBackward" class="btn btn-secondary btn-sm">Send Backward</button>
                 <button type="button" id="deletePlacedIcon" class="btn-remove">Delete Selected Icon</button>
               </div>
             </div>
           </div>
+        </div>
 
+        <div class="controls-grid tab-panel" data-tab="layout">
           <!-- Banner Dimensions Section -->
           <div class="control-section banner-dimensions-section">
             <div class="section-header" onclick="toggleSection('dimensionsSection')">
@@ -2792,90 +2824,6 @@
               <div class="col-5"><button class="btn btn-outline-primary w-100" onclick="setCanvasCourseCard()" data-bs-toggle="tooltip" data-bs-title="Set dimensions for Canvas course card (262x147px)">Course Card</button></div>
               <div class="col-5"><button class="btn btn-outline-primary w-100" onclick="setCanvasBanner()" data-bs-toggle="tooltip" data-bs-title="Set dimensions for Canvas banner (1200x200px)">Canvas Banner</button></div>
             </div>
-            </div>
-          </div>
-
-          <!-- Fabric.js Image Editing Section (Hidden) -->
-          <div class="control-section" style="display: none;">
-            <div class="section-header" onclick="toggleSection('fabricSection')">
-              <h3>🎨 Advanced Image Editing</h3>
-              <span class="section-toggle" id="fabricToggle">▼</span>
-            </div>
-            <div class="section-content" id="fabricSection">
-              <div class="form-group">
-                <label>Image Editor</label>
-                <button type="button" class="btn btn-primary" onclick="openFabricEditor()">
-                  <span>✏️</span> Open Image Editor
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="applyFabricChanges()">
-                  <span>✅</span> Apply Changes
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="resetFabricChanges()">
-                  <span>🔄</span> Reset
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="testFabric()" style="margin-top: 5px;">
-                  <span>🔧</span> Test Fabric.js
-                </button>
-              </div>
-
-              <div class="form-group">
-                <label>Image Filters</label>
-                <div class="filter-buttons">
-                  <button type="button" class="filter-btn" onclick="applyFilter('brightness', 1.2)">Brightness +</button>
-                  <button type="button" class="filter-btn" onclick="applyFilter('brightness', 0.8)">Brightness -</button>
-                  <button type="button" class="filter-btn" onclick="applyFilter('contrast', 1.3)">Contrast +</button>
-                  <button type="button" class="filter-btn" onclick="applyFilter('contrast', 0.7)">Contrast -</button>
-                  <button type="button" class="filter-btn" onclick="applyFilter('saturation', 1.5)">Saturation +</button>
-                  <button type="button" class="filter-btn" onclick="applyFilter('saturation', 0.5)">Saturation -</button>
-                  <button type="button" class="filter-btn" onclick="applyFilter('blur', 2)">Blur</button>
-                  <button type="button" class="filter-btn" onclick="applyFilter('sharpen', 1)">Sharpen</button>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Transform Tools</label>
-                <div class="transform-buttons">
-                  <button type="button" class="transform-btn" onclick="rotateImage(90)">Rotate 90°</button>
-                  <button type="button" class="transform-btn" onclick="rotateImage(-90)">Rotate -90°</button>
-                  <button type="button" class="transform-btn" onclick="flipImage('horizontal')">Flip H</button>
-                  <button type="button" class="transform-btn" onclick="flipImage('vertical')">Flip V</button>
-                  <button type="button" class="transform-btn" onclick="scaleImage(1.1)">Scale +10%</button>
-                  <button type="button" class="transform-btn" onclick="scaleImage(0.9)">Scale -10%</button>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Effects</label>
-                <div class="effect-buttons">
-                  <button type="button" class="effect-btn" onclick="applyEffect('grayscale')">Grayscale</button>
-                  <button type="button" class="effect-btn" onclick="applyEffect('sepia')">Sepia</button>
-                  <button type="button" class="effect-btn" onclick="applyEffect('invert')">Invert</button>
-                  <button type="button" class="effect-btn" onclick="applyEffect('vintage')">Vintage</button>
-                  <button type="button" class="effect-btn" onclick="applyEffect('warm')">Warm</button>
-                  <button type="button" class="effect-btn" onclick="applyEffect('cool')">Cool</button>
-                </div>
-              </div>
-
-              <!-- Fabric.js Canvas Container -->
-              <div id="fabricCanvasContainer" style="display: none; margin-top: 15px;">
-                <div style="border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; background: #f8f9fa;">
-                  <h4 style="margin: 0 0 10px 0; color: var(--primary-color);">Image Editor</h4>
-                  <canvas id="fabricCanvas" width="400" height="300" style="border: 1px solid #ddd; max-width: 100%;"></canvas>
-                  <div style="margin-top: 10px; text-align: center;">
-                    <div style="margin-bottom: 10px;">
-                      <label style="font-size: 12px; margin-right: 10px;">Export Quality:</label>
-                      <select id="fabricQuality" style="font-size: 12px; padding: 2px;">
-                        <option value="1">High Quality (1x)</option>
-                        <option value="2" selected>Ultra Quality (2x)</option>
-                        <option value="3">Maximum Quality (3x)</option>
-                        <option value="original">Original Size (Best)</option>
-                      </select>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="saveFabricChanges()">Save Changes</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelFabricChanges()">Cancel</button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -2937,6 +2885,7 @@
               <div class="col-12 col-sm-6"><button class="btn btn-info btn-sm w-100" onclick="bannerCreator.showHTMLPreview()">Show HTML Code</button></div>
               <div class="col-12 col-sm-6"><button class="btn btn-success btn-sm w-100" onclick="bannerCreator.copyToClipboard()">Copy to Clipboard</button></div>
             </div>
+            <p class="text-muted" style="font-size: 12px; margin-top: 8px;">Save Draft, Load Draft, and Undo are available in the toolbar above the Live Preview.</p>
              
              <!-- HTML Preview Modal -->
              <div id="htmlPreviewModal" class="html-preview-container">
@@ -2970,6 +2919,7 @@
     // Bump this whenever a dated change ships - shown in the header.
     const BUILD_DATE = 'August 16, 2026';
     const BUILD_VERSION = '4.1';
+    const DRAFT_STORAGE_KEY = 'bannerCreatorDraft';
 
     // Banner Creator Class
     class BannerCreator {
@@ -2977,6 +2927,44 @@
         this.initializeElements();
         this.bindEvents();
         this.updateBanner();
+        this.checkForSavedDraft();
+      }
+
+      saveDraft() {
+        try {
+          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(this.getBannerState()));
+          this.showMessage('✅ Draft saved', 'success');
+        } catch (error) {
+          console.error('Error saving draft:', error);
+          this.showMessage('❌ Error saving draft', 'error');
+        }
+      }
+
+      loadDraft() {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) {
+          this.showMessage('No saved draft found', 'warning');
+          return;
+        }
+        try {
+          this.applyBannerState(JSON.parse(raw));
+          this.showMessage('✅ Draft loaded', 'success');
+        } catch (error) {
+          console.error('Error loading draft:', error);
+          this.showMessage('❌ Error loading draft', 'error');
+        }
+      }
+
+      // On page load, if a draft exists, offer to load it without
+      // interrupting a fresh session with a blocking confirm.
+      checkForSavedDraft() {
+        if (!localStorage.getItem(DRAFT_STORAGE_KEY)) return;
+        const message = 'A saved draft is available. <button type="button" class="btn btn-sm btn-primary ms-2" onclick="bannerCreator.loadDraft()">Load Draft</button>';
+        if (window.showBootstrapAlert) {
+          window.showBootstrapAlert(message, 'success', 10000);
+        } else {
+          this.showMessage(message, 'success');
+        }
       }
 
       initializeElements() {
@@ -3093,6 +3081,10 @@
         this.placedImages = [];
         this.selectedImageId = null;
         this.placedImagesLayer = document.getElementById('placedImagesLayer');
+
+        // Undo history: capped stack of getBannerState() snapshots.
+        this.undoStack = [];
+        this._restoringState = false;
       }
 
       // Fetches an icon's raw SVG source once and reuses it - every export
@@ -3115,7 +3107,205 @@
           .replace(/fill="currentColor"/g, `fill="${color}"`);
       }
 
+      // Serializes everything needed to reconstruct the current banner:
+      // form field values, drag offsets, background/logo image data URIs,
+      // and placed icons/photos. Shared by save/load draft and undo. File
+      // inputs are skipped - the image data they produced already lives in
+      // bgImage/logoImage src, captured separately below.
+      getBannerState() {
+        const state = { inputs: {} };
+        const fileInputIds = new Set(['bgUpload', 'logoUpload', 'shapeImageUpload']);
+        Object.entries(this.inputs).forEach(([id, el]) => {
+          if (!el || fileInputIds.has(id)) return;
+          state.inputs[id] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+
+        state.shapeDragOffset = { ...this.shapeDragOffset };
+        state.logoDragOffset = { ...this.logoDragOffset };
+        state.currentIcon = this.currentIcon;
+
+        state.placedIcons = this.placedIcons.map(icon => ({ ...icon }));
+        state.placedImages = this.placedImages.map(image => ({ ...image }));
+
+        state.bgImage = {
+          src: this.preview.bgImage.src || '',
+          visible: this.preview.bgImage.style.display !== 'none' && !!this.preview.bgImage.src
+        };
+        state.logoImage = {
+          src: this.preview.logoImage.src || '',
+          visible: this.preview.logoImage.style.display !== 'none' && !!this.preview.logoImage.src
+        };
+
+        return state;
+      }
+
+      // Pushes the current state onto the undo stack, capped at 30 entries.
+      // Call this right before a mutating action takes effect. No-ops while
+      // a state is actively being restored, so undo/loadDraft don't record
+      // themselves as undoable steps.
+      pushUndoSnapshot() {
+        if (this._restoringState) return;
+        this.undoStack.push(JSON.stringify(this.getBannerState()));
+        if (this.undoStack.length > 30) {
+          this.undoStack.shift();
+        }
+        this.updateUndoButtonState();
+      }
+
+      undo() {
+        if (this.undoStack.length === 0) return;
+        const snapshot = this.undoStack.pop();
+        this._restoringState = true;
+        try {
+          this.applyBannerState(JSON.parse(snapshot));
+        } finally {
+          this._restoringState = false;
+        }
+        this.updateUndoButtonState();
+      }
+
+      updateUndoButtonState() {
+        const undoBtn = document.getElementById('undoBtn');
+        if (undoBtn) {
+          undoBtn.disabled = this.undoStack.length === 0;
+        }
+      }
+
+      // Restores everything captured by getBannerState(). Used by both
+      // "Load Draft" and undo.
+      applyBannerState(state) {
+        if (!state) return;
+
+        Object.entries(state.inputs || {}).forEach(([id, value]) => {
+          const el = this.inputs[id];
+          if (!el) return;
+          if (el.type === 'checkbox') {
+            el.checked = value;
+          } else {
+            el.value = value;
+          }
+        });
+
+        this.shapeDragOffset = state.shapeDragOffset ? { ...state.shapeDragOffset } : { x: 0, y: 0 };
+        this.logoDragOffset = state.logoDragOffset ? { ...state.logoDragOffset } : { x: 0, y: 0 };
+        this.currentIcon = state.currentIcon || this.currentIcon;
+
+        if (state.bgImage) {
+          this.preview.bgImage.src = state.bgImage.src || '';
+          this.preview.bgImage.style.display = state.bgImage.visible ? 'block' : 'none';
+        }
+        if (state.logoImage) {
+          this.preview.logoImage.src = state.logoImage.src || '';
+          this.preview.logoImage.style.display = state.logoImage.visible ? 'block' : 'none';
+        }
+
+        this.placedIcons.forEach(icon => {
+          const el = this.placedIconsLayer.querySelector(`[data-icon-id="${icon.id}"]`);
+          if (el && el._dragController) el._dragController.abort();
+        });
+        this.placedIconsLayer.innerHTML = '';
+        this.placedIcons = [];
+        this.selectedIconId = null;
+        (state.placedIcons || []).forEach(icon => this.restorePlacedIcon(icon));
+
+        this.placedImages.forEach(image => {
+          const el = this.placedImagesLayer.querySelector(`[data-image-id="${image.id}"]`);
+          if (el && el._dragController) el._dragController.abort();
+        });
+        this.placedImagesLayer.innerHTML = '';
+        this.placedImages = [];
+        this.selectedImageId = null;
+        (state.placedImages || []).forEach(image => this.restorePlacedImage(image));
+
+        const iconControls = document.getElementById('placedIconControls');
+        if (iconControls) iconControls.style.display = 'none';
+        const imageControls = document.getElementById('placedImageControls');
+        if (imageControls) imageControls.style.display = 'none';
+
+        this.updateBanner();
+        this.updateShape();
+      }
+
+      // Rebuilds one placed icon's DOM + drag handling from saved data,
+      // without the stagger/select/toast behavior addPlacedIcon uses for
+      // brand-new adds.
+      async restorePlacedIcon(icon) {
+        this.placedIcons.push(icon);
+
+        const el = document.createElement('span');
+        el.className = 'placed-icon';
+        el.dataset.iconId = icon.id;
+        el.style.left = `${icon.xPercent}%`;
+        el.style.top = `${icon.yPercent}%`;
+        el.style.width = `${icon.sizePx}px`;
+        el.style.height = `${icon.sizePx}px`;
+
+        try {
+          const svgText = await this.getIconSvgText(icon.url);
+          el.innerHTML = this.recolorSvgText(svgText, icon.color);
+        } catch (error) {
+          console.error('Error loading icon SVG:', error);
+        }
+
+        const deleteBadge = document.createElement('span');
+        deleteBadge.className = 'placed-icon-delete';
+        deleteBadge.textContent = '×';
+        deleteBadge.addEventListener('mousedown', (e) => e.stopPropagation());
+        deleteBadge.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deleteIconById(icon.id);
+        });
+        el.appendChild(deleteBadge);
+
+        this.attachPlacedIconDrag(el, icon);
+        this.placedIconsLayer.appendChild(el);
+      }
+
+      // Mirrors restorePlacedIcon for photos.
+      restorePlacedImage(image) {
+        this.placedImages.push(image);
+
+        const el = document.createElement('div');
+        el.className = 'placed-image';
+        el.dataset.imageId = image.id;
+        el.style.left = `${image.xPercent}%`;
+        el.style.top = `${image.yPercent}%`;
+        el.style.width = `${image.widthPx}px`;
+        el.style.height = `${image.widthPx / image.aspectRatio}px`;
+
+        const img = document.createElement('img');
+        img.src = image.url;
+        img.alt = 'Uploaded photo';
+        el.appendChild(img);
+
+        const deleteBadge = document.createElement('span');
+        deleteBadge.className = 'placed-icon-delete';
+        deleteBadge.textContent = '×';
+        deleteBadge.addEventListener('mousedown', (e) => e.stopPropagation());
+        deleteBadge.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deleteImageById(image.id);
+        });
+        el.appendChild(deleteBadge);
+
+        this.attachPlacedImageDrag(el, image);
+        this.placedImagesLayer.appendChild(el);
+      }
+
              bindEvents() {
+                            // Undo: snapshot state the moment a form field gains focus
+                            // (i.e. right before the user's edit lands), delegated so
+                            // it covers every current and future control without
+                            // threading a call through each individual listener.
+         const controlsPanel = document.querySelector('.controls-panel');
+         if (controlsPanel) {
+           controlsPanel.addEventListener('focusin', (e) => {
+             if (e.target.matches('input, select, textarea')) {
+               this.pushUndoSnapshot();
+             }
+           });
+         }
+
                             // Text and styling inputs
          const textInputs = ['title', 'subtitle2', 'subtitle3', 'titleSize', 'subtitleSize', 'titleColor', 'subtitleColor', 'subtitle3Color', 'bannerWidth', 'bannerHeight', 'fontChoice', 'textAlign'];
           textInputs.forEach(id => {
@@ -3234,13 +3424,13 @@
            this.inputs.bgImageOpacity.addEventListener('input', () => this.updateBgImageOpacity());
          }
          if (this.resetBgImagePosition) {
-           this.resetBgImagePosition.addEventListener('click', () => this.resetBgImageOffsets());
+           this.resetBgImagePosition.addEventListener('click', () => { this.pushUndoSnapshot(); this.resetBgImageOffsets(); });
          }
          if (this.resetShapePositionBtn) {
-           this.resetShapePositionBtn.addEventListener('click', () => this.resetShapePosition());
+           this.resetShapePositionBtn.addEventListener('click', () => { this.pushUndoSnapshot(); this.resetShapePosition(); });
          }
          if (this.resetLogoPositionBtn) {
-           this.resetLogoPositionBtn.addEventListener('click', () => this.resetLogoPosition());
+           this.resetLogoPositionBtn.addEventListener('click', () => { this.pushUndoSnapshot(); this.resetLogoPosition(); });
          }
 
          // Background image arrow controls
@@ -3320,6 +3510,7 @@
 
          const startDrag = (clientX, clientY) => {
            if (bgImage.style.display === 'none' || !bgImage.src) return;
+           this.pushUndoSnapshot();
            isDraggingImage = true;
            dragStartX = clientX;
            dragStartY = clientY;
@@ -3426,6 +3617,7 @@
 
          const startDrag = (clientX, clientY) => {
            if (shapeEl.style.display === 'none') return;
+           this.pushUndoSnapshot();
            isDragging = true;
            startX = clientX;
            startY = clientY;
@@ -3492,6 +3684,7 @@
 
          const startDrag = (clientX, clientY) => {
            if (el.style.display === 'none') return;
+           this.pushUndoSnapshot();
            isDragging = true;
            startX = clientX;
            startY = clientY;
@@ -3592,6 +3785,15 @@
          const deleteBtn = document.getElementById('deletePlacedIcon');
          if (deleteBtn) {
            deleteBtn.addEventListener('click', () => this.deleteSelectedIcon());
+         }
+
+         const bringIconForwardBtn = document.getElementById('bringIconForward');
+         if (bringIconForwardBtn) {
+           bringIconForwardBtn.addEventListener('click', () => this.reorderIcon(this.selectedIconId, 1));
+         }
+         const sendIconBackwardBtn = document.getElementById('sendIconBackward');
+         if (sendIconBackwardBtn) {
+           sendIconBackwardBtn.addEventListener('click', () => this.reorderIcon(this.selectedIconId, -1));
          }
 
          // Deselect when clicking anywhere on the banner that isn't an icon
@@ -3702,6 +3904,7 @@
        }
 
        async addPlacedIcon(url) {
+         this.pushUndoSnapshot();
          const id = `icon-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
          const count = this.placedIcons.length;
          // Stagger repeated adds a bit so they don't stack exactly on top
@@ -3770,6 +3973,7 @@
          let startYPercent = 0;
 
          const startDrag = (clientX, clientY) => {
+           this.pushUndoSnapshot();
            this.selectPlacedIcon(icon.id);
            isDragging = true;
            startX = clientX;
@@ -3837,7 +4041,26 @@
          }
        }
 
+       // Moves a placed icon within this.placedIcons and re-appends the
+       // layer's children in the new order - DOM order determines stacking
+       // within the shared placedIconsLayer z-index. direction is +1 (bring
+       // forward) or -1 (send backward).
+       reorderIcon(id, direction) {
+         const index = this.placedIcons.findIndex(i => i.id === id);
+         if (index === -1) return;
+         const targetIndex = index + direction;
+         if (targetIndex < 0 || targetIndex >= this.placedIcons.length) return;
+
+         this.pushUndoSnapshot();
+         [this.placedIcons[index], this.placedIcons[targetIndex]] = [this.placedIcons[targetIndex], this.placedIcons[index]];
+         this.placedIcons.forEach(icon => {
+           const el = this.placedIconsLayer.querySelector(`[data-icon-id="${icon.id}"]`);
+           if (el) this.placedIconsLayer.appendChild(el);
+         });
+       }
+
        deleteIconById(id) {
+         this.pushUndoSnapshot();
          this.placedIcons = this.placedIcons.filter(i => i.id !== id);
          const el = this.placedIconsLayer.querySelector(`[data-icon-id="${id}"]`);
          if (el) {
@@ -3904,6 +4127,15 @@
          const deleteBtn = document.getElementById('deletePlacedImage');
          if (deleteBtn) {
            deleteBtn.addEventListener('click', () => this.deleteSelectedImage());
+         }
+
+         const bringImageForwardBtn = document.getElementById('bringImageForward');
+         if (bringImageForwardBtn) {
+           bringImageForwardBtn.addEventListener('click', () => this.reorderImage(this.selectedImageId, 1));
+         }
+         const sendImageBackwardBtn = document.getElementById('sendImageBackward');
+         if (sendImageBackwardBtn) {
+           sendImageBackwardBtn.addEventListener('click', () => this.reorderImage(this.selectedImageId, -1));
          }
 
          // Deselect when clicking anywhere on the banner that isn't a photo
@@ -3984,6 +4216,7 @@
        addPlacedImage(url) {
          const probe = new Image();
          probe.onload = () => {
+           this.pushUndoSnapshot();
            const id = `image-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
            const count = this.placedImages.length;
            const aspectRatio = probe.naturalWidth / probe.naturalHeight || 1;
@@ -4044,6 +4277,7 @@
          let startYPercent = 0;
 
          const startDrag = (clientX, clientY) => {
+           this.pushUndoSnapshot();
            this.selectPlacedImage(image.id);
            isDragging = true;
            startX = clientX;
@@ -4109,7 +4343,23 @@
          }
        }
 
+       // Mirrors reorderIcon for photos.
+       reorderImage(id, direction) {
+         const index = this.placedImages.findIndex(i => i.id === id);
+         if (index === -1) return;
+         const targetIndex = index + direction;
+         if (targetIndex < 0 || targetIndex >= this.placedImages.length) return;
+
+         this.pushUndoSnapshot();
+         [this.placedImages[index], this.placedImages[targetIndex]] = [this.placedImages[targetIndex], this.placedImages[index]];
+         this.placedImages.forEach(image => {
+           const el = this.placedImagesLayer.querySelector(`[data-image-id="${image.id}"]`);
+           if (el) this.placedImagesLayer.appendChild(el);
+         });
+       }
+
        deleteImageById(id) {
+         this.pushUndoSnapshot();
          this.placedImages = this.placedImages.filter(i => i.id !== id);
          const el = this.placedImagesLayer.querySelector(`[data-image-id="${id}"]`);
          if (el) {
@@ -7424,6 +7674,15 @@
        bannerCreator.copyToClipboard();
      }
      
+     function switchControlsTab(tabName) {
+       document.querySelectorAll('.tab-button').forEach(btn => {
+         btn.classList.toggle('active', btn.dataset.tab === tabName);
+       });
+       document.querySelectorAll('.controls-grid.tab-panel').forEach(panel => {
+         panel.classList.toggle('active', panel.dataset.tab === tabName);
+       });
+     }
+
      function toggleSection(sectionId) {
        const section = document.getElementById(sectionId);
        if (!section) return;
@@ -7447,8 +7706,6 @@
          'customIconsSection',
          'exportOptionsSection'
        ];
-
-       // Fabric.js section is completely hidden (display: none)
 
        openByDefault.forEach(sectionId => setSectionCollapsed(sectionId, false));
        collapsedByDefault.forEach(sectionId => setSectionCollapsed(sectionId, true));
@@ -7597,6 +7854,7 @@
         if (hasUnsavedContent && !window.confirm('Applying this template will replace your current title and subtitle. Continue?')) {
           return;
         }
+        bannerCreator.pushUndoSnapshot();
          bannerCreator.inputs.title.value = template.title;
          bannerCreator.inputs.subtitle2.value = template.subtitle2;
         bannerCreator.inputs.sinclairColor.value = template.sinclairColor;
@@ -7609,6 +7867,19 @@
         bannerCreator.showMessage(`✅ Applied ${templateType} template!`, 'success');
       }
     }
+
+    // Ctrl+Z / Cmd+Z undo. Ignored while a text field has focus so it
+    // doesn't fight the browser's native undo inside that field.
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        const tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (bannerCreator) {
+          e.preventDefault();
+          bannerCreator.undo();
+        }
+      }
+    });
 
     // Initialize the application
     window.addEventListener('DOMContentLoaded', () => {
@@ -7910,28 +8181,6 @@
         }
       };
 
-      // Test function for Fabric.js debugging
-      window.testFabric = function() {
-        if (typeof fabric !== 'undefined') {
-        }
-        
-        // Test creating a simple canvas
-        try {
-          const testCanvas = document.createElement('canvas');
-          testCanvas.width = 100;
-          testCanvas.height = 100;
-          document.body.appendChild(testCanvas);
-          
-          const fabricTest = new fabric.Canvas(testCanvas);
-          
-          // Clean up
-          fabricTest.dispose();
-          document.body.removeChild(testCanvas);
-        } catch (error) {
-          console.error('Fabric canvas creation test: FAILED', error);
-        }
-      };
-
       // Test function to force load help content
       window.forceLoadHelp = function() {
         if (typeof loadHelpContent === 'function') {
@@ -7940,358 +8189,6 @@
           console.error('loadHelpContent function not found!');
         }
       };
-
-      // Fabric.js Image Editing Functions
-      let fabricCanvas = null;
-      let fabricImage = null;
-      let originalImageData = null;
-
-      function openFabricEditor() {
-        
-        // Check if Fabric.js is available
-        if (typeof fabric === 'undefined') {
-          console.error('Fabric.js not available!');
-          alert('Fabric.js library is not loaded. Please refresh the page.');
-          return;
-        }
-        
-        const bgImage = document.getElementById('bgImage');
-        if (!bgImage || !bgImage.src) {
-          alert('Please upload a background image first!');
-          return;
-        }
-
-        const container = document.getElementById('fabricCanvasContainer');
-        const canvas = document.getElementById('fabricCanvas');
-        
-        if (!container || !canvas) {
-          console.error('Fabric canvas elements not found!');
-          return;
-        }
-
-        
-        // Show the editor
-        container.style.display = 'block';
-
-        try {
-          // Get the original image dimensions for better quality
-          const bgImage = document.getElementById('bgImage');
-          const originalWidth = bgImage.naturalWidth || 1200;
-          const originalHeight = bgImage.naturalHeight || 800;
-          
-          // Use larger canvas for better quality (minimum 800x600)
-          const canvasWidth = Math.max(800, Math.min(originalWidth, 1200));
-          const canvasHeight = Math.max(600, Math.min(originalHeight, 800));
-          
-          
-          // Update canvas element size
-          const canvasElement = document.getElementById('fabricCanvas');
-          canvasElement.width = canvasWidth;
-          canvasElement.height = canvasHeight;
-          canvasElement.style.maxWidth = '100%';
-          canvasElement.style.height = 'auto';
-          
-          // Initialize Fabric.js canvas with high quality settings
-          fabricCanvas = new fabric.Canvas('fabricCanvas', {
-            width: canvasWidth,
-            height: canvasHeight,
-            backgroundColor: '#f0f0f0',
-            enableRetinaScaling: true,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high',
-            renderOnAddRemove: true
-          });
-          
-
-          // Load the background image into Fabric.js with maximum quality preservation
-          fabric.Image.fromURL(bgImage.src, function(img) {
-            fabricImage = img;
-            
-            // Preserve original image quality and make it editable
-            img.set({
-              selectable: true,
-              evented: true,
-              lockUniScaling: false,
-              hasControls: true,
-              hasBorders: true,
-              transparentCorners: false,
-              cornerColor: 'rgba(102,153,255,0.8)',
-              cornerSize: 12,
-              padding: 5
-            });
-            
-            // Calculate optimal scaling to fit canvas while preserving quality
-            const canvasWidth = fabricCanvas.getWidth();
-            const canvasHeight = fabricCanvas.getHeight();
-            const imgAspect = img.width / img.height;
-            const canvasAspect = canvasWidth / canvasHeight;
-            
-            let scaleX, scaleY;
-            if (imgAspect > canvasAspect) {
-              // Image is wider than canvas
-              scaleX = canvasWidth / img.width;
-              scaleY = scaleX;
-            } else {
-              // Image is taller than canvas
-              scaleY = canvasHeight / img.height;
-              scaleX = scaleY;
-            }
-            
-            // Apply scaling while preserving maximum quality
-            img.scale(scaleX);
-            img.set({
-              left: (canvasWidth - img.width * scaleX) / 2,
-              top: (canvasHeight - img.height * scaleY) / 2
-            });
-            
-            fabricCanvas.add(img);
-            fabricCanvas.renderAll();
-            
-            // Store original state with maximum quality
-            originalImageData = fabricCanvas.toDataURL({
-              format: 'png',
-              quality: 1.0,
-              multiplier: 1
-            });
-          }, { 
-            crossOrigin: 'anonymous',
-            preserveAspectRatio: true,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high'
-          });
-          
-        } catch (error) {
-          console.error('Error initializing Fabric.js:', error);
-          alert('Error initializing image editor: ' + error.message);
-        }
-      }
-
-      function applyFilter(type, value) {
-        
-        if (!fabricCanvas || !fabricImage) {
-          console.error('Fabric canvas or image not available');
-          alert('Please open the image editor first!');
-          return;
-        }
-
-        try {
-          switch(type) {
-            case 'brightness':
-              fabricImage.filters.push(new fabric.Image.filters.Brightness({ brightness: value - 1 }));
-              break;
-            case 'contrast':
-              fabricImage.filters.push(new fabric.Image.filters.Contrast({ contrast: value - 1 }));
-              break;
-            case 'saturation':
-              fabricImage.filters.push(new fabric.Image.filters.Saturation({ saturation: value - 1 }));
-              break;
-            case 'blur':
-              fabricImage.filters.push(new fabric.Image.filters.Blur({ blur: value }));
-              break;
-            case 'sharpen':
-              fabricImage.filters.push(new fabric.Image.filters.Convolute({
-                matrix: [0, -1, 0, -1, 5, -1, 0, -1, 0]
-              }));
-              break;
-            default:
-              console.error('Unknown filter type:', type);
-              return;
-          }
-          
-          fabricImage.applyFilters();
-          fabricCanvas.renderAll();
-          
-        } catch (error) {
-          console.error('Error applying filter:', error);
-          alert('Error applying filter: ' + error.message);
-        }
-      }
-
-      function rotateImage(angle) {
-        if (!fabricCanvas || !fabricImage) {
-          alert('Please open the image editor first!');
-          return;
-        }
-        
-        fabricImage.rotate((fabricImage.angle || 0) + angle);
-        fabricCanvas.renderAll();
-      }
-
-      function flipImage(direction) {
-        if (!fabricCanvas || !fabricImage) {
-          alert('Please open the image editor first!');
-          return;
-        }
-        
-        if (direction === 'horizontal') {
-          fabricImage.set('flipX', !fabricImage.flipX);
-        } else if (direction === 'vertical') {
-          fabricImage.set('flipY', !fabricImage.flipY);
-        }
-        
-        fabricCanvas.renderAll();
-      }
-
-      function scaleImage(factor) {
-        if (!fabricCanvas || !fabricImage) {
-          alert('Please open the image editor first!');
-          return;
-        }
-        
-        const currentScale = fabricImage.scaleX || 1;
-        const newScale = currentScale * factor;
-        
-        fabricImage.scale(newScale);
-        fabricCanvas.renderAll();
-      }
-
-      function applyEffect(effect) {
-        if (!fabricCanvas || !fabricImage) {
-          alert('Please open the image editor first!');
-          return;
-        }
-
-        // Remove existing filters
-        fabricImage.filters = [];
-        
-        switch(effect) {
-          case 'grayscale':
-            fabricImage.filters.push(new fabric.Image.filters.Grayscale());
-            break;
-          case 'sepia':
-            fabricImage.filters.push(new fabric.Image.filters.Sepia());
-            break;
-          case 'invert':
-            fabricImage.filters.push(new fabric.Image.filters.Invert());
-            break;
-          case 'vintage':
-            fabricImage.filters.push(
-              new fabric.Image.filters.Sepia(),
-              new fabric.Image.filters.Brightness({ brightness: -0.1 }),
-              new fabric.Image.filters.Contrast({ contrast: 0.1 })
-            );
-            break;
-          case 'warm':
-            fabricImage.filters.push(
-              new fabric.Image.filters.Brightness({ brightness: 0.1 }),
-              new fabric.Image.filters.Saturation({ saturation: 0.2 })
-            );
-            break;
-          case 'cool':
-            fabricImage.filters.push(
-              new fabric.Image.filters.Brightness({ brightness: -0.05 }),
-              new fabric.Image.filters.Saturation({ saturation: -0.1 })
-            );
-            break;
-        }
-        
-        fabricImage.applyFilters();
-        fabricCanvas.renderAll();
-      }
-
-      function saveFabricChanges() {
-        if (!fabricCanvas) {
-          alert('No changes to save!');
-          return;
-        }
-
-        try {
-          
-          // Get quality setting from dropdown
-          const qualitySelect = document.getElementById('fabricQuality');
-          const qualityValue = qualitySelect ? qualitySelect.value : '2';
-          
-          let qualityMultiplier = 2;
-          if (qualityValue === 'original') {
-            // Use original image dimensions for maximum quality
-            const bgImage = document.getElementById('bgImage');
-            const originalWidth = bgImage.naturalWidth || 1200;
-            const originalHeight = bgImage.naturalHeight || 800;
-            qualityMultiplier = Math.max(originalWidth / fabricCanvas.getWidth(), originalHeight / fabricCanvas.getHeight());
-          } else {
-            qualityMultiplier = parseInt(qualityValue);
-          }
-          
-          // Get the edited image data with maximum quality settings
-          const editedImageData = fabricCanvas.toDataURL({
-            format: 'png',
-            quality: 1.0,
-            multiplier: qualityMultiplier,
-            enableRetinaScaling: true
-          });
-          
-          
-          // Update the background image
-          const bgImage = document.getElementById('bgImage');
-          if (bgImage) {
-            // Create a new image to ensure proper loading
-            const newImage = new Image();
-            newImage.onload = function() {
-              bgImage.src = this.src;
-              bgImage.style.display = 'block';
-              
-              // Close the editor
-              cancelFabricChanges();
-              
-              // Update the banner
-              if (bannerCreator) {
-                bannerCreator.updateBanner();
-              }
-              
-              alert('Image changes applied successfully!');
-            };
-            newImage.onerror = function() {
-              console.error('Error loading edited image');
-              alert('Error applying image changes. Please try again.');
-            };
-            newImage.src = editedImageData;
-          } else {
-            console.error('Background image element not found');
-            alert('Error: Background image element not found');
-          }
-          
-        } catch (error) {
-          console.error('Error saving fabric changes:', error);
-          alert('Error saving changes: ' + error.message);
-        }
-      }
-
-      function cancelFabricChanges() {
-        const container = document.getElementById('fabricCanvasContainer');
-        if (container) {
-          container.style.display = 'none';
-        }
-        
-        if (fabricCanvas) {
-          fabricCanvas.dispose();
-          fabricCanvas = null;
-          fabricImage = null;
-        }
-      }
-
-      function resetFabricChanges() {
-        if (originalImageData && fabricCanvas) {
-          fabricCanvas.loadFromJSON(originalImageData, function() {
-            fabricCanvas.renderAll();
-          });
-        }
-      }
-
-      function applyFabricChanges() {
-        saveFabricChanges();
-      }
-
-      // Make Fabric.js functions globally accessible
-      window.openFabricEditor = openFabricEditor;
-      window.applyFilter = applyFilter;
-      window.rotateImage = rotateImage;
-      window.flipImage = flipImage;
-      window.scaleImage = scaleImage;
-      window.applyEffect = applyEffect;
-      window.saveFabricChanges = saveFabricChanges;
-      window.cancelFabricChanges = cancelFabricChanges;
-      window.resetFabricChanges = resetFabricChanges;
-      window.applyFabricChanges = applyFabricChanges;
 
       // Logo Type Button Functions
       function setLogoType(type) {
