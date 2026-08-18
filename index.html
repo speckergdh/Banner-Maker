@@ -67,15 +67,15 @@
 
        /* Border Radius - large shells stay near-square (structure), mid/small
           stays rounded (buttons, inputs, cards) so the two read as distinct */
-       --border-radius-sm: 6px;
-       --border-radius-md: 10px;
+       --border-radius-sm: 4px;
+       --border-radius-md: 6px;
        --border-radius-lg: 4px;
-       
+
        /* Shadows */
-       --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
-       --shadow-md: 0 8px 24px rgba(0,0,0,0.15);
-       --shadow-lg: 0 16px 48px rgba(0,0,0,0.2);
-       --shadow-glow: 0 0 20px rgba(97, 99, 102, 0.3);
+       --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+       --shadow-md: 0 3px 10px rgba(0,0,0,0.1);
+       --shadow-lg: 0 8px 24px rgba(0,0,0,0.14);
+       --shadow-glow: 0 0 12px rgba(97, 99, 102, 0.2);
        
        /* Glassmorphism */
        --glass-bg: rgba(255, 255, 255, 0.1);
@@ -196,39 +196,65 @@
        }
 
        .controls-grid.tab-panel.active {
-         display: grid;
-       }
-
-       .controls-tabs {
          display: flex;
-         gap: var(--spacing-xs);
-         max-width: 1600px;
-         margin: 0 auto var(--spacing-md) auto;
-         overflow-x: auto;
+         flex-wrap: wrap;
+         align-items: flex-start;
        }
 
-       .tab-button {
-         flex: 1;
-         padding: var(--spacing-sm) var(--spacing-md);
-         border: 2px solid var(--border-color);
-         border-radius: var(--border-radius-md);
+       .controls-grid.tab-panel.active > .control-section {
+         flex: 1 1 320px;
+       }
+
+       .controls-body {
+         display: flex;
+         gap: var(--spacing-md);
+         align-items: flex-start;
+         max-width: 1600px;
+         margin: 0 auto;
+       }
+
+       .controls-rail {
+         display: flex;
+         flex-direction: column;
+         gap: 2px;
+         flex: 0 0 170px;
+         border: 1px solid #d5dbe1;
+         border-radius: var(--border-radius-sm);
+         overflow: hidden;
+       }
+
+       .rail-button {
+         padding: 12px 16px;
+         border: none;
+         border-bottom: 1px solid #e5e9ec;
          background: var(--surface-color-solid);
          color: var(--text-primary);
-         font-weight: 600;
-         font-size: 0.95rem;
+         font-weight: 500;
+         font-size: 1rem;
+         line-height: 1.2;
+         text-align: left;
          cursor: pointer;
-         white-space: nowrap;
-         transition: all 0.2s ease;
+         transition: background-color 0.15s ease, color 0.15s ease;
        }
 
-       .tab-button:hover {
-         border-color: var(--primary-color);
+       .controls-rail .rail-button:last-child {
+         border-bottom: none;
        }
 
-       .tab-button.active {
+       .rail-button:hover {
+         background: #eef1f4;
+         color: var(--primary-color);
+       }
+
+       .rail-button.active {
          background: var(--primary-color);
-         border-color: var(--primary-color);
          color: #ffffff;
+         font-weight: 600;
+       }
+
+       .controls-content {
+         flex: 1;
+         min-width: 0;
        }
 
        /* Numbers the visible panels in workflow order; display:none sections
@@ -257,15 +283,14 @@
       .customization-title {
         background: var(--sinclair-navy);
         color: white !important;
-        font-size: 2rem;
-        font-weight: 800;
+        font-size: 1.3rem;
+        font-weight: 700;
         text-align: center;
-        margin-bottom: calc(var(--spacing-xl) + 40px);
-        padding: var(--spacing-md) var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        padding: var(--spacing-sm) var(--spacing-lg);
         border-radius: var(--border-radius-sm);
         position: relative;
-        box-shadow: var(--shadow-md);
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        box-shadow: var(--shadow-sm);
       }
       
       /* Collapsible sections */
@@ -1674,14 +1699,24 @@
          padding: var(--spacing-md);
        }
 
-       .controls-tabs {
-         flex-wrap: wrap;
+       .controls-body {
+         flex-direction: column;
        }
 
-       .tab-button {
-         flex: 1 1 45%;
-         white-space: normal;
-         font-size: 0.85rem;
+       .controls-rail {
+         flex-direction: row;
+         flex-wrap: wrap;
+         flex: 0 0 auto;
+         width: 100%;
+         border: none;
+         gap: 6px;
+       }
+
+       .rail-button {
+         flex: 1 1 30%;
+         text-align: center;
+         border: 1px solid #d5dbe1;
+         border-radius: var(--border-radius-sm);
        }
 
        .header h1 {
@@ -1711,9 +1746,8 @@
     }
 
     /* Success/Error Messages */
-    #messageContainer {
-      padding: 2rem 0;
-      margin-top: 1rem;
+    #messageContainer:empty {
+      display: none;
     }
     
     .message {
@@ -1805,16 +1839,34 @@
       border-radius: var(--border-radius-sm);
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
       gap: 2px;
-      font-size: 10px;
-      font-weight: bold;
+      padding: 4px 8px;
+      overflow: hidden;
       color: white;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
-      /* Darkening scrim so text/icon stay legible on light template colors
+      /* Darkening scrim so text stays legible on light template colors
          (e.g. Humanities lavender, Engineering tan) without a per-color fix */
       box-shadow: inset 0 0 0 100px rgba(0, 0, 0, 0.22);
+    }
+
+    .template-preview-title {
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .template-preview-subtitle {
+      font-size: 8px;
+      font-weight: 400;
+      line-height: 1.25;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .template-icon {
@@ -2154,9 +2206,9 @@
       <div class="preview-panel">
         <h2>Live Preview</h2>
         <div class="preview-toolbar">
-          <button type="button" id="undoBtn" class="btn btn-secondary btn-sm" onclick="bannerCreator.undo()" title="Undo last change (Ctrl+Z)" disabled>↩️ Undo</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="bannerCreator.saveDraft()" title="Save your current progress in this browser">💾 Save Draft</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="bannerCreator.loadDraft()" title="Restore your last saved draft">📂 Load Draft</button>
+          <button type="button" id="undoBtn" class="btn btn-secondary btn-sm" onclick="bannerCreator.undo()" title="Undo last change (Ctrl+Z)" disabled>Undo</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="bannerCreator.saveDraft()" title="Save your current progress in this browser">Save Draft</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="bannerCreator.loadDraft()" title="Restore your last saved draft">Load Draft</button>
         </div>
         <div class="preview-wrapper">
                  <div id="bannerPreview">
@@ -2237,66 +2289,102 @@
       <div class="controls-panel">
         <h2 class="customization-title">Customization Options</h2>
 
-        <div class="controls-tabs" role="tablist">
-          <button type="button" class="tab-button active" data-tab="content" onclick="switchControlsTab('content')">Content &amp; Style</button>
-          <button type="button" class="tab-button" data-tab="images" onclick="switchControlsTab('images')">Images &amp; Shapes</button>
-          <button type="button" class="tab-button" data-tab="layout" onclick="switchControlsTab('layout')">Layout &amp; Export</button>
-        </div>
+        <div class="controls-body">
+          <div class="controls-rail" role="tablist">
+            <button type="button" class="rail-button active" data-tab="templates" onclick="switchControlsTab('templates')"><span class="rail-label">Templates</span></button>
+            <button type="button" class="rail-button" data-tab="text" onclick="switchControlsTab('text')"><span class="rail-label">Text</span></button>
+            <button type="button" class="rail-button" data-tab="style" onclick="switchControlsTab('style')"><span class="rail-label">Style</span></button>
+            <button type="button" class="rail-button" data-tab="background" onclick="switchControlsTab('background')"><span class="rail-label">Background</span></button>
+            <button type="button" class="rail-button" data-tab="logo" onclick="switchControlsTab('logo')"><span class="rail-label">Logo</span></button>
+            <button type="button" class="rail-button" data-tab="shape" onclick="switchControlsTab('shape')"><span class="rail-label">Shape</span></button>
+            <button type="button" class="rail-button" data-tab="photos" onclick="switchControlsTab('photos')"><span class="rail-label">Photos</span></button>
+            <button type="button" class="rail-button" data-tab="icons" onclick="switchControlsTab('icons')"><span class="rail-label">Icons</span></button>
+            <button type="button" class="rail-button" data-tab="export" onclick="switchControlsTab('export')"><span class="rail-label">Size &amp; Export</span></button>
+          </div>
 
-        <div class="controls-grid tab-panel active" data-tab="content">
+          <div class="controls-content">
+
+        <div class="controls-grid tab-panel active" data-tab="templates">
           <!-- Template Presets Section -->
           <div class="control-section">
-            <div class="section-header" onclick="toggleSection('templatesSection')">
+            <div class="section-header">
               <h3>Quick Templates</h3>
-              <span class="section-toggle" id="templatesToggle">▼</span>
             </div>
             <div class="section-content" id="templatesSection">
             <div class="template-presets">
               <div class="template-preset" data-template="academic" onclick="applyTemplate('academic')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #AC1A2F, #8b1526);"><span class="template-icon">🎓</span>Academic</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #AC1A2F, #8b1526); text-align: left; font-family: 'Playfair Display', serif;">
+                  <div class="template-preview-title">Introduction to College Writing</div>
+                  <div class="template-preview-subtitle">Composition &amp; Rhetoric</div>
+                </div>
                 <div>Academic Course</div>
               </div>
               <div class="template-preset" data-template="business" onclick="applyTemplate('business')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #616366, #4a4d4f);"><span class="template-icon">💼</span>Business</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #616366, #4a4d4f); text-align: center; font-family: 'Montserrat', sans-serif;">
+                  <div class="template-preview-title">Business Management</div>
+                  <div class="template-preview-subtitle">Principles &amp; Practices</div>
+                </div>
                 <div>Business Course</div>
               </div>
               <div class="template-preset" data-template="science" onclick="applyTemplate('science')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #1C5840, #0f3a2a);"><span class="template-icon">🔬</span>Science</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #1C5840, #0f3a2a); text-align: left; font-family: 'Roboto', sans-serif;">
+                  <div class="template-preview-title">General Biology</div>
+                  <div class="template-preview-subtitle">Cell Biology &amp; Genetics</div>
+                </div>
                 <div>Science Course</div>
               </div>
               <div class="template-preset" data-template="arts" onclick="applyTemplate('arts')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #850054, #6a0043);"><span class="template-icon">🎨</span>Arts</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #850054, #6a0043); text-align: center; font-family: 'Quicksand', sans-serif;">
+                  <div class="template-preview-title">Art Appreciation</div>
+                  <div class="template-preview-subtitle">Visual Arts &amp; Design</div>
+                </div>
                 <div>Arts Course</div>
               </div>
               <div class="template-preset" data-template="technology" onclick="applyTemplate('technology')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #01A6F0, #0077B5);"><span class="template-icon">💻</span>Technology</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #01A6F0, #0077B5); text-align: left; font-family: 'Fira Sans', sans-serif;">
+                  <div class="template-preview-title">Computer Programming</div>
+                  <div class="template-preview-subtitle">Java &amp; Web Development</div>
+                </div>
                 <div>Technology Course</div>
               </div>
               <div class="template-preset" data-template="healthcare" onclick="applyTemplate('healthcare')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #00B894, #00A085);"><span class="template-icon">🏥</span>Healthcare</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #00B894, #00A085); text-align: center; font-family: 'Open Sans', sans-serif;">
+                  <div class="template-preview-title">Nursing Fundamentals</div>
+                  <div class="template-preview-subtitle">Patient Care &amp; Safety</div>
+                </div>
                 <div>Healthcare Course</div>
               </div>
               <div class="template-preset" data-template="education" onclick="applyTemplate('education')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #6C5CE7, #5B4BC4);"><span class="template-icon">📚</span>Education</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #6C5CE7, #5B4BC4); text-align: left; font-family: 'Merriweather', serif;">
+                  <div class="template-preview-title">Early Childhood Education</div>
+                  <div class="template-preview-subtitle">Child Development &amp; Learning</div>
+                </div>
                 <div>Education Course</div>
               </div>
               <div class="template-preset" data-template="engineering" onclick="applyTemplate('engineering')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #FDCB6E, #E17055);"><span class="template-icon">⚙️</span>Engineering</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #FDCB6E, #E17055); text-align: center; font-family: 'Oswald', sans-serif;">
+                  <div class="template-preview-title">Engineering Technology</div>
+                  <div class="template-preview-subtitle">Mechanical &amp; Electrical Systems</div>
+                </div>
                 <div>Engineering Course</div>
               </div>
               <div class="template-preset" data-template="humanities" onclick="applyTemplate('humanities')">
-                <div class="template-preview" style="background: linear-gradient(135deg, #A29BFE, #8B7EC8);"><span class="template-icon">📖</span>Humanities</div>
+                <div class="template-preview" style="background: linear-gradient(135deg, #A29BFE, #8B7EC8); text-align: left; font-family: 'Playfair Display', serif;">
+                  <div class="template-preview-title">American History</div>
+                  <div class="template-preview-subtitle">Colonial to Modern Era</div>
+                </div>
                 <div>Humanities Course</div>
               </div>
             </div>
             </div>
           </div>
+        </div>
 
+        <div class="controls-grid tab-panel" data-tab="text">
                      <!-- Text Content Section -->
            <div class="control-section">
-             <div class="section-header" onclick="toggleSection('textContentSection')">
+             <div class="section-header">
                <h3>Text Content</h3>
-               <span class="section-toggle" id="textContentToggle">▼</span>
              </div>
              <div class="section-content" id="textContentSection">
              <div class="form-group">
@@ -2332,7 +2420,9 @@
              </div>
              </div>
            </div>
+        </div>
 
+        <div class="controls-grid tab-panel" data-tab="style">
           <!-- Colors Section -->
           <div class="control-section">
             <div class="section-header" onclick="toggleSection('colorsSection')">
@@ -2451,14 +2541,13 @@
            </div>
         </div>
 
-        <div class="controls-grid tab-panel" data-tab="images">
-          <!-- Images Section -->
+        <div class="controls-grid tab-panel" data-tab="background">
+          <!-- Background Image Section -->
           <div class="control-section">
-            <div class="section-header" onclick="toggleSection('imagesSection')">
-              <h3>Images</h3>
-              <span class="section-toggle" id="imagesToggle">▼</span>
+            <div class="section-header">
+              <h3>Background Image</h3>
             </div>
-            <div class="section-content" id="imagesSection">
+            <div class="section-content" id="backgroundImageSection">
             <div class="form-group">
               <label for="bgUpload">Background Image</label>
               <input type="file" id="bgUpload" accept="image/*">
@@ -2548,13 +2637,34 @@
                 <span id="bgImageOpacityValue">85%</span>
               </div>
             </div>
-            
+            </div>
+          </div>
+        </div>
 
-             
+        <div class="controls-grid tab-panel" data-tab="logo">
+          <!-- Logo Section -->
+          <div class="control-section">
+            <div class="section-header">
+              <h3>Logo</h3>
+            </div>
+            <div class="section-content" id="logoSection">
                                                        <div class="form-group">
                  <label for="logoUpload">Logo Upload (Right Side)</label>
                  <input type="file" id="logoUpload" accept="image/*">
                  <button class="btn-remove" onclick="removeLogo()">Remove Logo</button>
+               </div>
+
+               <div class="form-group">
+                 <label>Or choose from Unsplash</label>
+                 <div class="unsplash-search">
+                   <input type="text" id="logoUnsplashSearch" class="form-control" placeholder="Search for images (e.g., nature, business, abstract)">
+                   <button type="button" id="searchLogoUnsplash" class="btn btn-primary btn-sm">Search</button>
+                   <button type="button" id="randomLogoUnsplash" class="btn btn-outline-secondary btn-sm">Random</button>
+                 </div>
+                 <div id="logoUnsplashResults" class="unsplash-grid" style="display: none;"></div>
+                 <div id="logoUnsplashLoading" style="display: none;">
+                   <p>Loading images...</p>
+                 </div>
                </div>
 
                <div class="form-group">
@@ -2622,16 +2732,15 @@
                   <span id="logoSizeValue">120px</span>
                 </div>
               </div>
-              
-
             </div>
           </div>
-          
+        </div>
+
+        <div class="controls-grid tab-panel" data-tab="shape">
           <!-- Decorative Shapes Section -->
           <div class="control-section">
-            <div class="section-header" onclick="toggleSection('shapeSection')">
+            <div class="section-header">
               <h3>Decorative Shapes</h3>
-              <span class="section-toggle" id="shapeToggle">▼</span>
             </div>
             <div class="section-content" id="shapeSection">
               <div class="form-group">
@@ -2726,15 +2835,27 @@
                 <label for="shapeImageUpload">Upload Shape Image</label>
                 <input type="file" id="shapeImageUpload" accept="image/*">
                 <button type="button" onclick="removeShapeImage()" class="btn btn-sm">Remove Image</button>
+
+                <label>Or choose from Unsplash</label>
+                <div class="unsplash-search">
+                  <input type="text" id="shapeUnsplashSearch" class="form-control" placeholder="Search for images (e.g., nature, business, abstract)">
+                  <button type="button" id="searchShapeUnsplash" class="btn btn-primary btn-sm">Search</button>
+                  <button type="button" id="randomShapeUnsplash" class="btn btn-outline-secondary btn-sm">Random</button>
+                </div>
+                <div id="shapeUnsplashResults" class="unsplash-grid" style="display: none;"></div>
+                <div id="shapeUnsplashLoading" style="display: none;">
+                  <p>Loading images...</p>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
+        <div class="controls-grid tab-panel" data-tab="photos">
           <!-- Extra Photos Section -->
           <div class="control-section">
-            <div class="section-header" onclick="toggleSection('extraImagesSection')">
+            <div class="section-header">
               <h3>Extra Photos</h3>
-              <span class="section-toggle" id="extraImagesToggle">▼</span>
             </div>
             <div class="section-content" id="extraImagesSection">
               <div class="form-group">
@@ -2765,12 +2886,13 @@
               </div>
             </div>
           </div>
+        </div>
 
+        <div class="controls-grid tab-panel" data-tab="icons">
           <!-- Custom Icons Section -->
           <div class="control-section">
-            <div class="section-header" onclick="toggleSection('customIconsSection')">
+            <div class="section-header">
               <h3>Custom Icons</h3>
-              <span class="section-toggle" id="customIconsToggle">▼</span>
             </div>
             <div class="section-content" id="customIconsSection">
               <div class="form-group">
@@ -2796,7 +2918,7 @@
           </div>
         </div>
 
-        <div class="controls-grid tab-panel" data-tab="layout">
+        <div class="controls-grid tab-panel" data-tab="export">
           <!-- Banner Dimensions Section -->
           <div class="control-section banner-dimensions-section">
             <div class="section-header" onclick="toggleSection('dimensionsSection')">
@@ -2907,10 +3029,12 @@
              </div>
              </div>
            </div>
+
+          </div>
         </div>
       </div>
     </div>
-    
+
     <!-- Bottom padding spacer -->
     <div style="height: 100px;"></div>
   </div>
@@ -3316,7 +3440,25 @@
           
           // Custom logo upload
           this.inputs.logoUpload.addEventListener('change', (e) => this.handleCustomLogoUpload(e));
-          
+
+          const searchLogoUnsplashBtn = document.getElementById('searchLogoUnsplash');
+          if (searchLogoUnsplashBtn) {
+            searchLogoUnsplashBtn.addEventListener('click', () => {
+              const query = document.getElementById('logoUnsplashSearch').value.trim();
+              if (!query) {
+                this.showMessage('Please enter a search term', 'error');
+                return;
+              }
+              this.runUnsplashSearch({ query, resultsId: 'logoUnsplashResults', loadingId: 'logoUnsplashLoading', onSelect: (url) => this.selectLogoUnsplashImage(url) });
+            });
+          }
+          const randomLogoUnsplashBtn = document.getElementById('randomLogoUnsplash');
+          if (randomLogoUnsplashBtn) {
+            randomLogoUnsplashBtn.addEventListener('click', () => {
+              this.runUnsplashSearch({ resultsId: 'logoUnsplashResults', loadingId: 'logoUnsplashLoading', random: true, onSelect: (url) => this.selectLogoUnsplashImage(url) });
+            });
+          }
+
           // Shape controls
           this.inputs.shapeType.addEventListener('change', () => {
             this.shapeDragOffset = { x: 0, y: 0 };
@@ -3347,6 +3489,23 @@
           }
           if (this.inputs.shapeImageUpload) {
             this.inputs.shapeImageUpload.addEventListener('change', (e) => this.handleShapeImageUpload(e));
+          }
+          const searchShapeUnsplashBtn = document.getElementById('searchShapeUnsplash');
+          if (searchShapeUnsplashBtn) {
+            searchShapeUnsplashBtn.addEventListener('click', () => {
+              const query = document.getElementById('shapeUnsplashSearch').value.trim();
+              if (!query) {
+                this.showMessage('Please enter a search term', 'error');
+                return;
+              }
+              this.runUnsplashSearch({ query, resultsId: 'shapeUnsplashResults', loadingId: 'shapeUnsplashLoading', onSelect: (url) => this.selectShapeUnsplashImage(url) });
+            });
+          }
+          const randomShapeUnsplashBtn = document.getElementById('randomShapeUnsplash');
+          if (randomShapeUnsplashBtn) {
+            randomShapeUnsplashBtn.addEventListener('click', () => {
+              this.runUnsplashSearch({ resultsId: 'shapeUnsplashResults', loadingId: 'shapeUnsplashLoading', random: true, onSelect: (url) => this.selectShapeUnsplashImage(url) });
+            });
           }
 
          // Sinclair color dropdown
@@ -5335,6 +5494,72 @@
 
                              
        
+       // Shared Unsplash search used by any panel that wants a "search
+       // instead of upload" option - Logo and Shape reuse this rather than
+       // duplicating the bg-image/extra-photos implementations.
+       async runUnsplashSearch({ query, resultsId, loadingId, onSelect, random }) {
+         const loadingEl = loadingId && document.getElementById(loadingId);
+         const resultsEl = document.getElementById(resultsId);
+         if (loadingEl) loadingEl.style.display = 'block';
+         if (resultsEl) resultsEl.style.display = 'none';
+
+         try {
+           const url = random
+             ? 'https://api.unsplash.com/photos/random?count=12&orientation=landscape'
+             : `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=12&orientation=landscape`;
+           const response = await fetch(url, {
+             headers: { 'Authorization': 'Client-ID 5u_U6reEyqaO7fFjIzkZzjpI_RjJmeLzikHd6WFjeTg' }
+           });
+           if (!response.ok) throw new Error('Failed to fetch images');
+           const data = await response.json();
+           const images = random ? data : data.results;
+           this.renderUnsplashResults(images, resultsId, onSelect);
+         } catch (error) {
+           console.error('Error fetching Unsplash images:', error);
+           this.showMessage('Error fetching images. Please try again.', 'error');
+         } finally {
+           if (loadingEl) loadingEl.style.display = 'none';
+         }
+       }
+
+       renderUnsplashResults(images, resultsId, onSelect) {
+         const resultsContainer = document.getElementById(resultsId);
+         if (!resultsContainer) return;
+         resultsContainer.innerHTML = '';
+
+         images.forEach(image => {
+           const imgElement = document.createElement('img');
+           imgElement.src = image.urls.small;
+           imgElement.alt = image.alt_description || 'Unsplash image';
+           imgElement.className = 'unsplash-image';
+           imgElement.addEventListener('click', () => {
+             resultsContainer.querySelectorAll('.unsplash-image').forEach(img => img.classList.remove('selected'));
+             imgElement.classList.add('selected');
+             onSelect(image.urls.regular);
+           });
+           resultsContainer.appendChild(imgElement);
+         });
+
+         resultsContainer.style.display = 'grid';
+       }
+
+       selectLogoUnsplashImage(url) {
+         this.pushUndoSnapshot();
+         if (typeof setLogoType === 'function') setLogoType('upload');
+         this.preview.logoImage.src = url;
+         this.preview.logoImage.style.display = 'block';
+         this.updateBanner();
+         this.showMessage('✅ Unsplash image selected as logo!', 'success');
+       }
+
+       selectShapeUnsplashImage(url) {
+         this.pushUndoSnapshot();
+         this.preview.shapeElement.style.backgroundImage = `url(${url})`;
+         this.preview.shapeElement.style.backgroundSize = 'cover';
+         this.preview.shapeElement.style.backgroundPosition = 'center';
+         this.showMessage('✅ Unsplash image selected as shape fill!', 'success');
+       }
+
        handleCustomLogoUpload(event) {
          const file = event.target.files[0];
          if (file) {
@@ -7675,7 +7900,7 @@
      }
      
      function switchControlsTab(tabName) {
-       document.querySelectorAll('.tab-button').forEach(btn => {
+       document.querySelectorAll('.rail-button').forEach(btn => {
          btn.classList.toggle('active', btn.dataset.tab === tabName);
        });
        document.querySelectorAll('.controls-grid.tab-panel').forEach(panel => {
@@ -7690,25 +7915,12 @@
      }
 
      function initializeCollapsibleSections() {
-       // Sections a new user needs right away stay open; less-common ones start
-       // collapsed so the page isn't a wall of controls on first load.
-       const openByDefault = [
-         'templatesSection',
-         'textContentSection',
-         'colorsSection',
-         'typographySection',
-         'dimensionsSection'
-       ];
-       const collapsedByDefault = [
-         'imagesSection',
-         'shapeSection',
-         'extraImagesSection',
-         'customIconsSection',
-         'exportOptionsSection'
-       ];
-
-       openByDefault.forEach(sectionId => setSectionCollapsed(sectionId, false));
-       collapsedByDefault.forEach(sectionId => setSectionCollapsed(sectionId, true));
+       // Most sections are now the sole content of their rail panel, so
+       // there's nothing left to collapse. Colors/Typography share the
+       // "Style" panel and Dimensions/Export share "Size & Export" - both
+       // stay open by default since only two sections live there.
+       ['colorsSection', 'typographySection', 'dimensionsSection', 'exportOptionsSection']
+         .forEach(sectionId => setSectionCollapsed(sectionId, false));
      }
 
      function setSectionCollapsed(sectionId, collapsed) {
